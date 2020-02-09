@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html>
+<head>
+    
+
+    
+
+    
+
+
+
+    <meta charset="utf-8">
+    
+    
+    
+    
+    <title>SimpleRabbitmqClient剖析 | 懒散集</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    
+    <meta name="theme-color" content="#2182C7">
+    
+    
+    <meta name="keywords" content="SimpleRabbitmqClient">
+    <meta name="description" content="背景SimpleRabbitmqClient是一个对于Rabbitmq的C接口库rabbitmq-c上做的一层封装    为什么要封装rabbitmq-c     rabbitmq-c是对C的一个接口，它有太多的自己定义的类型，比如我们要往rabbitmq-c的函数中添加一个字符串总要把它变为amqp_cstring_bytes(…)，rabbitmq-c的一些自定义类型太复杂，而我们根本不需要去">
+<meta property="og:type" content="article">
+<meta property="og:title" content="SimpleRabbitmqClient剖析">
+<meta property="og:url" content="http://yoursite.com/2018/11/27/SimpleRabbitmqClient%E5%89%96%E6%9E%90/">
+<meta property="og:site_name" content="懒散集">
+<meta property="og:description" content="背景SimpleRabbitmqClient是一个对于Rabbitmq的C接口库rabbitmq-c上做的一层封装    为什么要封装rabbitmq-c     rabbitmq-c是对C的一个接口，它有太多的自己定义的类型，比如我们要往rabbitmq-c的函数中添加一个字符串总要把它变为amqp_cstring_bytes(…)，rabbitmq-c的一些自定义类型太复杂，而我们根本不需要去">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://yoursite.com/2018/11/27/SimpleRabbitmqClient%E5%89%96%E6%9E%90/SimpleRabbitmqClient%E5%89%96%E6%9E%90/%E7%AE%80%E5%8D%95%E5%89%96%E6%9E%90%E5%9B%BE.png">
+<meta property="article:published_time" content="2018-11-26T16:58:26.000Z">
+<meta property="article:modified_time" content="2018-11-26T16:58:26.000Z">
+<meta property="article:author" content="Zerber">
+<meta property="article:tag" content="SimpleRabbitmqClient">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://yoursite.com/2018/11/27/SimpleRabbitmqClient%E5%89%96%E6%9E%90/SimpleRabbitmqClient%E5%89%96%E6%9E%90/%E7%AE%80%E5%8D%95%E5%89%96%E6%9E%90%E5%9B%BE.png">
+    
+    <link rel="shortcut icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/css/style.css?v=1.7.2">
+    <script>window.lazyScripts=[]</script>
+
+    <!-- custom head -->
+    
+
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+<body>
+    <div id="loading" class="active"></div>
+
+    <aside id="menu" class="hide" >
+  <div class="inner flex-row-vertical">
+    <a href="javascript:;" class="header-icon waves-effect waves-circle waves-light" id="menu-off">
+        <i class="icon icon-lg icon-close"></i>
+    </a>
+    <div class="brand-wrap" style="background-image:url(/img/kaku.jpeg)">
+      <div class="brand">
+        <a href="/null" class="avatar waves-effect waves-circle waves-light">
+          <img src="/img/miao2.jpeg">
+        </a>
+        <hgroup class="introduce">
+          <h5 class="nickname">Zerber</h5>
+          <a href="mailto:null" class="mail">
+        </hgroup>
+      </div>
+    </div>
+    <div class="scroll-wrap flex-col">
+      <ul class="nav">
+        
+            <li class="waves-block waves-effect">
+              <a href="/"  >
+                <i class="icon icon-lg icon-home"></i>
+                主页
+              </a>
+            </li>
+        
+            <li class="waves-block waves-effect">
+              <a href="/archives"  >
+                <i class="icon icon-lg icon-archives"></i>
+                Archives
+              </a>
+            </li>
+        
+            <li class="waves-block waves-effect">
+              <a href="/tags"  >
+                <i class="icon icon-lg icon-tags"></i>
+                Tags
+              </a>
+            </li>
+        
+            <li class="waves-block waves-effect">
+              <a href="http://www.weibo.com/ysweb" target="_blank" >
+                <i class="icon icon-lg icon-twitter"></i>
+                Twitter
+              </a>
+            </li>
+        
+      </ul>
+    </div>
+  </div>
+</aside>
+
+    <main id="main">
+        <header class="top-header" id="header">
+    <div class="flex-row">
+        <a href="javascript:;" class="header-icon waves-effect waves-circle waves-light on" id="menu-toggle">
+          <i class="icon icon-lg icon-navicon"></i>
+        </a>
+        <div class="flex-col header-title ellipsis">SimpleRabbitmqClient剖析</div>
+        
+        <div class="search-wrap" id="search-wrap">
+            <a href="javascript:;" class="header-icon waves-effect waves-circle waves-light" id="back">
+                <i class="icon icon-lg icon-chevron-left"></i>
+            </a>
+            <input type="text" id="key" class="search-input" autocomplete="off" placeholder="Search">
+            <a href="javascript:;" class="header-icon waves-effect waves-circle waves-light" id="search">
+                <i class="icon icon-lg icon-search"></i>
+            </a>
+        </div>
+        
+        
+        <a href="javascript:;" class="header-icon waves-effect waves-circle waves-light" id="menuShare">
+            <i class="icon icon-lg icon-share-alt"></i>
+        </a>
+        
+    </div>
+</header>
+<header class="content-header post-header">
+
+    <div class="container fade-scale">
+        <h1 class="title">SimpleRabbitmqClient剖析</h1>
+        <h5 class="subtitle">
+            
+                <time datetime="2018-11-26T16:58:26.000Z" itemprop="datePublished" class="page-time">
+  2018-11-27
+</time>
+
+
+            
+        </h5>
+    </div>
+
+    
+
+
+</header>
+
+
+<div class="container body-wrap">
+    
+    <aside class="post-widget">
+        <nav class="post-toc-wrap post-toc-shrink" id="post-toc">
+            <h4>TOC</h4>
+            <ol class="post-toc"><li class="post-toc-item post-toc-level-3"><a class="post-toc-link" href="#背景"><span class="post-toc-number">1.</span> <span class="post-toc-text">背景</span></a></li><li class="post-toc-item post-toc-level-3"><a class="post-toc-link" href="#优点"><span class="post-toc-number">2.</span> <span class="post-toc-text">优点</span></a></li><li class="post-toc-item post-toc-level-3"><a class="post-toc-link" href="#框架"><span class="post-toc-number">3.</span> <span class="post-toc-text">框架</span></a></li><li class="post-toc-item post-toc-level-3"><a class="post-toc-link" href="#剖析"><span class="post-toc-number">4.</span> <span class="post-toc-text">剖析</span></a><ol class="post-toc-child"><li class="post-toc-item post-toc-level-4"><a class="post-toc-link" href="#Channel"><span class="post-toc-number">4.1.</span> <span class="post-toc-text">Channel</span></a></li><li class="post-toc-item post-toc-level-4"><a class="post-toc-link" href="#ChannelImpl"><span class="post-toc-number">4.2.</span> <span class="post-toc-text">ChannelImpl</span></a></li><li class="post-toc-item post-toc-level-4"><a class="post-toc-link" href="#TableValueImpl"><span class="post-toc-number">4.3.</span> <span class="post-toc-text">TableValueImpl</span></a></li><li class="post-toc-item post-toc-level-4"><a class="post-toc-link" href="#Envelope"><span class="post-toc-number">4.4.</span> <span class="post-toc-text">Envelope</span></a></li><li class="post-toc-item post-toc-level-4"><a class="post-toc-link" href="#BasicMessageImpl"><span class="post-toc-number">4.5.</span> <span class="post-toc-text">BasicMessageImpl</span></a></li></ol></li><li class="post-toc-item post-toc-level-3"><a class="post-toc-link" href="#总结"><span class="post-toc-number">5.</span> <span class="post-toc-text">总结</span></a></li></ol>
+        </nav>
+    </aside>
+
+
+<article id="post-SimpleRabbitmqClient剖析"
+  class="post-article article-type-post fade" itemprop="blogPost">
+
+    <div class="post-card">
+        <h1 class="post-card-title">SimpleRabbitmqClient剖析</h1>
+        <div class="post-meta">
+            <time class="post-time" title="2018-11-27 00:58:26" datetime="2018-11-26T16:58:26.000Z"  itemprop="datePublished">2018-11-27</time>
+
+            
+
+
+            
+<span id="busuanzi_container_page_pv" title="文章总阅读量" style='display:none'>
+    <i class="icon icon-eye icon-pr"></i><span id="busuanzi_value_page_pv"></span>
+</span>
+
+
+        </div>
+        <div class="post-content" id="post-content" itemprop="postContent">
+            <h3 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h3><p>SimpleRabbitmqClient是一个对于Rabbitmq的C接口库rabbitmq-c上做的一层封装   </p>
+<p><strong>为什么要封装rabbitmq-c</strong>    </p>
+<p>rabbitmq-c是对C的一个接口，它有太多的自己定义的类型，比如我们要往rabbitmq-c的函数中添加一个字符串总要把它变为amqp_cstring_bytes(…)，rabbitmq-c的一些自定义类型太复杂，而我们根本不需要去关心，我们只需要关心传进去的值和返回的结果。    </p>
+<p>SimpleRabbitmqClient做了:<br>1、把复杂的rabbitmq-c接口转化成通俗的C++接口<br>2、封装了对客户端的连接管理以及错误处理</p>
+<a id="more"></a>
+
+<h3 id="优点"><a href="#优点" class="headerlink" title="优点"></a>优点</h3><ul>
+<li>跨平台 兼容Windows和Linux</li>
+<li>接口多、更灵活、封装了连接管理以及错误处理</li>
+<li>做了一个对consume的管理</li>
+</ul>
+<h3 id="框架"><a href="#框架" class="headerlink" title="框架"></a>框架</h3><figure class="image-bubble">
+                <div class="img-lightbox">
+                    <div class="overlay"></div>
+                    <img src="SimpleRabbitmqClient剖析/简单剖析图.png" alt="简单剖析图" title="">
+                </div>
+                <div class="image-caption">简单剖析图</div>
+            </figure>
+
+<h3 id="剖析"><a href="#剖析" class="headerlink" title="剖析"></a>剖析</h3><h4 id="Channel"><a href="#Channel" class="headerlink" title="Channel"></a>Channel</h4><p>对rabbitmq的类型做了一个转换，就是做了一个普通封装，但是没有什么实际操作   </p>
+<p>其中包括:    </p>
+<ul>
+<li>网络连接的判断</li>
+<li>doLogin 、doRpc<br>(ps: doLogin、doRpc这个直接就是对rabbitmq的操作，只不过这一层封装在ChannelImpl中)</li>
+</ul>
+<h4 id="ChannelImpl"><a href="#ChannelImpl" class="headerlink" title="ChannelImpl"></a>ChannelImpl</h4><ul>
+<li>对rabbitmq的一个实际操作，这里面做了很多主要的的工作，就比如:     </li>
+</ul>
+<ol>
+<li>doLogin<br> 实际上就是对登陆的一个封装操作，但是封装的参数相对会多一些，一般好像直接用    amqp_login登陆，他用的是amqp_login_with_properties，也是很用心了</li>
+<li>doRpc<br> 对rabbitmq-c操作的一些处理，包括错误处理等</li>
+</ol>
+<ul>
+<li>对consume的一个管理，建立一个map表，当生成一个consume的时候，注册进map并返回相应的consumeTag(我的理解就是在单线程中有多个consume)</li>
+</ul>
+<h4 id="TableValueImpl"><a href="#TableValueImpl" class="headerlink" title="TableValueImpl"></a>TableValueImpl</h4><p>对于amqp_table_t的一个对外封装，实际上是自己写的一个Table，主要用于argument，为了能让外部对amqp_table_t更好用，所以提供了一个Table，在内部转化为amqp_table_t。<br>(不过他这个地方倒是又一个很有意思的东西，用了amqp_pool_t，这是rabbitmq-c中自带的一个memory pool，用这个生成了一个amqp_pool_t。话说回来我实在是看不懂为什么要这么骚操作)</p>
+<h4 id="Envelope"><a href="#Envelope" class="headerlink" title="Envelope"></a>Envelope</h4><p>一个信封，封装了返回的message,我觉得这个我没什么说的，但实际上这个信封对外提供了很多Get的方便的接口，ChannelImpl在接收到生成的消息以后会去调用</p>
+<h4 id="BasicMessageImpl"><a href="#BasicMessageImpl" class="headerlink" title="BasicMessageImpl"></a>BasicMessageImpl</h4><p>这个东西我也是后来剖析完整体框架以后看的吧，所以我也没有把这个画到图里面去<br>他的主要功能还是用m_body封装了返回过来的信息<br>我就是想说一下里面用了amqp_basic_properties_t这个结构体很有意思，就是这个结构体好像是rabbitmq-c本身的一个结构体，它相当于提供给用户封装一些userid之类的基本属性，第一次见，所以感觉这个作者应该也是很用心了，把rabbitmq-c这个库封装到极致了</p>
+<h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h3><p>我来个人评价一下这个库吧，不喜勿喷:     </p>
+<ul>
+<li><p><strong>这个库的封装是极致的</strong><br>对于rabbitmq的封装性来说，我觉得这个库是完美的，极致的，我能说基本上所有的rabbitmq-c的类型使用到了极致，感觉没有什么看漏的吧。(包括<strong>BasicMessage</strong>中有<strong>amqp_basic_properties_t</strong>这种类型，我的妈)</p>
+</li>
+<li><p><strong>写法过于中规中矩</strong><br>没有什么特别让人眼前一亮的东西，就是结构很简单吧我觉得，基本没用什么设计模式，所以我感觉看起没什么特别值得剖析的地方，没有对某一块地方拿出来说，但是用起来就很灵活了</p>
+</li>
+<li><p><strong>过于依赖boost</strong><br>很好奇为什么不用C11！ </p>
+</li>
+</ul>
+<p>其实我想大家对这个库有什么独特的看法也可以来联系我的，我会出剖析</p>
+
+        </div>
+
+        <blockquote class="post-copyright">
+    
+    <div class="content">
+        
+<span class="post-time">
+    Last updated: <time datetime="2018-11-26T16:58:26.000Z" itemprop="dateUpdated">2018-11-27 00:58:26</time>
+</span><br>
+
+
+        
+        这里可以写作者留言，标签和 hexo 中所有变量及辅助函数等均可调用，示例：<a href="/2018/11/27/SimpleRabbitmqClient%E5%89%96%E6%9E%90/" target="_blank" rel="external">http://yoursite.com/2018/11/27/SimpleRabbitmqClient%E5%89%96%E6%9E%90/</a>
+        
+    </div>
+    
+    <footer>
+        <a href="http://yoursite.com">
+            <img src="/img/miao2.jpeg" alt="Zerber">
+            Zerber
+        </a>
+    </footer>
+</blockquote>
+
+        
+<div class="page-reward">
+    <a id="rewardBtn" href="javascript:;" class="page-reward-btn waves-effect waves-circle waves-light">赏</a>
+</div>
+
+
+
+        <div class="post-footer">
+            
+	<ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/SimpleRabbitmqClient/" rel="tag">SimpleRabbitmqClient</a></li></ul>
+
+
+            
+<div class="page-share-wrap">
+    
+
+<div class="page-share" id="pageShare">
+    <ul class="reset share-icons">
+      <li>
+        <a class="weibo share-sns" target="_blank" href="http://service.weibo.com/share/share.php?url=http://yoursite.com/2018/11/27/SimpleRabbitmqClient%E5%89%96%E6%9E%90/&title=《SimpleRabbitmqClient剖析》 — 懒散集&pic=http://yoursite.com/img/miao2.jpeg" data-title="微博">
+          <i class="icon icon-weibo"></i>
+        </a>
+      </li>
+      <li>
+        <a class="weixin share-sns wxFab" href="javascript:;" data-title="微信">
+          <i class="icon icon-weixin"></i>
+        </a>
+      </li>
+      <li>
+        <a class="qq share-sns" target="_blank" href="http://connect.qq.com/widget/shareqq/index.html?url=http://yoursite.com/2018/11/27/SimpleRabbitmqClient%E5%89%96%E6%9E%90/&title=《SimpleRabbitmqClient剖析》 — 懒散集&source=背景SimpleRabbitmqClient是一个对于Rabbitmq的C接口库rabbitmq-c上做的一层封装   
+为什么要封装rabbitmq-c..." data-title=" QQ">
+          <i class="icon icon-qq"></i>
+        </a>
+      </li>
+      <li>
+        <a class="facebook share-sns" target="_blank" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2018/11/27/SimpleRabbitmqClient%E5%89%96%E6%9E%90/" data-title=" Facebook">
+          <i class="icon icon-facebook"></i>
+        </a>
+      </li>
+      <li>
+        <a class="twitter share-sns" target="_blank" href="https://twitter.com/intent/tweet?text=《SimpleRabbitmqClient剖析》 — 懒散集&url=http://yoursite.com/2018/11/27/SimpleRabbitmqClient%E5%89%96%E6%9E%90/&via=http://yoursite.com" data-title=" Twitter">
+          <i class="icon icon-twitter"></i>
+        </a>
+      </li>
+      <li>
+        <a class="google share-sns" target="_blank" href="https://plus.google.com/share?url=http://yoursite.com/2018/11/27/SimpleRabbitmqClient%E5%89%96%E6%9E%90/" data-title=" Google+">
+          <i class="icon icon-google-plus"></i>
+        </a>
+      </li>
+    </ul>
+ </div>
+
+
+
+    <a href="javascript:;" id="shareFab" class="page-share-fab waves-effect waves-circle">
+        <i class="icon icon-share-alt icon-lg"></i>
+    </a>
+</div>
+
+
+
+        </div>
+    </div>
+
+    
+<nav class="post-nav flex-row flex-justify-between">
+  
+    <div class="waves-block waves-effect prev">
+      <a href="/2018/12/10/%E5%AF%B9%E4%BA%8Esentinel%E7%9A%84SPI%E6%8E%A5%E5%8F%A3%E6%A8%A1%E5%BC%8F%E5%88%86%E6%9E%90/" id="post-prev" class="post-nav-link">
+        <div class="tips"><i class="icon icon-angle-left icon-lg icon-pr"></i> Prev</div>
+        <h4 class="title">对于sentinel的SPI接口模式分析</h4>
+      </a>
+    </div>
+  
+
+  
+    <div class="waves-block waves-effect next">
+      <a href="/2018/11/15/SimpleRabbitmqClient-Demo/" id="post-next" class="post-nav-link">
+        <div class="tips">Next <i class="icon icon-angle-right icon-lg icon-pl"></i></div>
+        <h4 class="title">SimpleRabbitmqClient Demo</h4>
+      </a>
+    </div>
+  
+</nav>
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</article>
+
+<div id="reward" class="page-modal reward-lay">
+    <a class="close" href="javascript:;"><i class="icon icon-close"></i></a>
+    <h3 class="reward-title">
+        <i class="icon icon-quote-left"></i>
+        谢谢大爷~
+        <i class="icon icon-quote-right"></i>
+    </h3>
+    <div class="reward-content">
+        
+        <div class="reward-code">
+            <img id="rewardCode" src="/img/wechat.jpg" alt="打赏二维码">
+        </div>
+        
+        <label class="reward-toggle">
+            <input id="rewardToggle" type="checkbox" class="reward-toggle-check"
+                data-wechat="/img/wechat.jpg" data-alipay="/img/alipay.jpg">
+            <div class="reward-toggle-ctrol">
+                <span class="reward-toggle-item wechat">微信</span>
+                <span class="reward-toggle-label"></span>
+                <span class="reward-toggle-item alipay">支付宝</span>
+            </div>
+        </label>
+        
+    </div>
+</div>
+
+
+
+</div>
+
+        <footer class="footer">
+    <div class="top">
+        
+<p>
+    <span id="busuanzi_container_site_uv" style='display:none'>
+        站点总访客数：<span id="busuanzi_value_site_uv"></span>
+    </span>
+    <span id="busuanzi_container_site_pv" style='display:none'>
+        站点总访问量：<span id="busuanzi_value_site_pv"></span>
+    </span>
+</p>
+
+
+        <p>
+            
+            <span>This blog is licensed under a <a rel="license noopener" href="https://creativecommons.org/licenses/by/4.0/" target="_blank">Creative Commons Attribution 4.0 International License</a>.</span>
+        </p>
+    </div>
+    <div class="bottom">
+        <p><span>Zerber &copy; 2015 - 2020</span>
+            <span>
+                
+                Power by <a href="http://hexo.io/" target="_blank">Hexo</a> Theme <a href="https://github.com/yscoder/hexo-theme-indigo" target="_blank">indigo</a>
+            </span>
+        </p>
+    </div>
+</footer>
+
+    </main>
+    <div class="mask" id="mask"></div>
+<a href="javascript:;" id="gotop" class="waves-effect waves-circle waves-light"><span class="icon icon-lg icon-chevron-up"></span></a>
+
+
+
+<div class="global-share" id="globalShare">
+    <ul class="reset share-icons">
+      <li>
+        <a class="weibo share-sns" target="_blank" href="http://service.weibo.com/share/share.php?url=http://yoursite.com/2018/11/27/SimpleRabbitmqClient%E5%89%96%E6%9E%90/&title=《SimpleRabbitmqClient剖析》 — 懒散集&pic=http://yoursite.com/img/miao2.jpeg" data-title="微博">
+          <i class="icon icon-weibo"></i>
+        </a>
+      </li>
+      <li>
+        <a class="weixin share-sns wxFab" href="javascript:;" data-title="微信">
+          <i class="icon icon-weixin"></i>
+        </a>
+      </li>
+      <li>
+        <a class="qq share-sns" target="_blank" href="http://connect.qq.com/widget/shareqq/index.html?url=http://yoursite.com/2018/11/27/SimpleRabbitmqClient%E5%89%96%E6%9E%90/&title=《SimpleRabbitmqClient剖析》 — 懒散集&source=背景SimpleRabbitmqClient是一个对于Rabbitmq的C接口库rabbitmq-c上做的一层封装   
+为什么要封装rabbitmq-c..." data-title=" QQ">
+          <i class="icon icon-qq"></i>
+        </a>
+      </li>
+      <li>
+        <a class="facebook share-sns" target="_blank" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2018/11/27/SimpleRabbitmqClient%E5%89%96%E6%9E%90/" data-title=" Facebook">
+          <i class="icon icon-facebook"></i>
+        </a>
+      </li>
+      <li>
+        <a class="twitter share-sns" target="_blank" href="https://twitter.com/intent/tweet?text=《SimpleRabbitmqClient剖析》 — 懒散集&url=http://yoursite.com/2018/11/27/SimpleRabbitmqClient%E5%89%96%E6%9E%90/&via=http://yoursite.com" data-title=" Twitter">
+          <i class="icon icon-twitter"></i>
+        </a>
+      </li>
+      <li>
+        <a class="google share-sns" target="_blank" href="https://plus.google.com/share?url=http://yoursite.com/2018/11/27/SimpleRabbitmqClient%E5%89%96%E6%9E%90/" data-title=" Google+">
+          <i class="icon icon-google-plus"></i>
+        </a>
+      </li>
+    </ul>
+ </div>
+
+
+<div class="page-modal wx-share" id="wxShare">
+    <a class="close" href="javascript:;"><i class="icon icon-close"></i></a>
+    <p>扫一扫，分享到微信</p>
+    <img src="//api.qrserver.com/v1/create-qr-code/?data=http://yoursite.com/2018/11/27/SimpleRabbitmqClient%E5%89%96%E6%9E%90/" alt="微信分享二维码">
+</div>
+
+
+
+
+    <script src="//cdn.bootcss.com/node-waves/0.7.4/waves.min.js"></script>
+<script>
+var BLOG = { ROOT: '/', SHARE: true, REWARD: true };
+
+
+</script>
+
+<script src="/js/main.min.js?v=1.7.2"></script>
+
+
+<div class="search-panel" id="search-panel">
+    <ul class="search-result" id="search-result"></ul>
+</div>
+<template id="search-tpl">
+<li class="item">
+    <a href="{path}" class="waves-block waves-effect">
+        <div class="title ellipsis" title="{title}">{title}</div>
+        <div class="flex-row flex-middle">
+            <div class="tags ellipsis">
+                {tags}
+            </div>
+            <time class="flex-col time">{date}</time>
+        </div>
+    </a>
+</li>
+</template>
+
+<script src="/js/search.min.js?v=1.7.2" async></script>
+
+
+
+
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+<script>
+(function() {
+    var OriginTitile = document.title, titleTime;
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+            document.title = '倒是希望你快点回家了=   =！';
+            clearTimeout(titleTime);
+        } else {
+            document.title = '(つェ⊂)咦!又好了!';
+            titleTime = setTimeout(function() {
+                document.title = OriginTitile;
+            },2000);
+        }
+    });
+})();
+</script>
+
+
+
+</body>
+</html>
