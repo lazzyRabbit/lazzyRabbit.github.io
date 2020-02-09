@@ -182,14 +182,7 @@
 <li><a href="#群发核心分析">群发核心分析</a></li>
 </ul>
 <h3 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h3><p>群发系统其实和推送系统是很类似的，都是通过服务器这个中间载体向用户大规模的去推发消息，架构是类似的，但是又不是尽完全相同的，本篇文章会对推送和群发的对比，来说明推送框架设计的核心。</p>
-<h3 id="架构设计"><a href="#架构设计" class="headerlink" title="架构设计"></a>架构设计</h3><figure class="image-bubble">
-                <div class="img-lightbox">
-                    <div class="overlay"></div>
-                    <img src="推送框架设计一些总结/推送整体图.png" alt="推送框架" title="">
-                </div>
-                <div class="image-caption">推送框架</div>
-            </figure>
-
+<h3 id="架构设计"><a href="#架构设计" class="headerlink" title="架构设计"></a>架构设计</h3><p><img src="%E6%8E%A8%E9%80%81%E6%A1%86%E6%9E%B6%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%BA%9B%E6%80%BB%E7%BB%93/%E6%8E%A8%E9%80%81%E6%95%B4%E4%BD%93%E5%9B%BE.png" alt="推送框架"></p>
 <p>[此处图片暂时省略。。。]</p>
 <p>Server服务 –&gt; route –&gt; cs –&gt; client</p>
 <h3 id="功能与接口的设计"><a href="#功能与接口的设计" class="headerlink" title="功能与接口的设计"></a>功能与接口的设计</h3><p>推送所需要的功能是保证在长连接连接上App以后，能及时推送消息到用户手机上，以及做好统计记录，所以这其中有几个点是我们在设计接口时需要考虑的。</p>
@@ -325,27 +318,13 @@
     
 
 
-
-
-
-
-
-
 <section class="comments" id="comments">
-    <div id="gitment_thread"></div>
-    <link rel="stylesheet" href="//unpkg.com/gitment/style/default.css">
-    <script src="//unpkg.com/gitment/dist/gitment.browser.js"></script>
+    <div id="disqus_thread"></div>
     <script>
-        var gitment = new Gitment({
-            owner: 'lazzyRabbit',
-            repo: 'lazzyRabbit.github.io',
-            oauth: {
-                client_id: 'c79d3e9ab497826bccc7',
-                client_secret: '278ce1e586729635df6f626b07221ae1c6c67721',
-            },
-        })
-        gitment.render('comments')
+    var disqus_shortname = 'flase';
+    lazyScripts.push('//' + disqus_shortname + '.disqus.com/embed.js')
     </script>
+    <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" target="_blank" rel="noopener">comments powered by Disqus.</a></noscript>
 </section>
 
 
@@ -356,6 +335,36 @@
 
 
 
+
+
+
+
+
+
+
+<section class="comments" id="comments">
+    <div id="gitalk-container"></div>
+    <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+    <script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+    <script>
+        var id = location.pathname
+        if (location.pathname.length > 50) {
+          id = location.pathname.replace(/\/\d+\/\d+\/\d+\//, '').replace('/', '').substring(0, 50)
+        }
+        const gitalk = new Gitalk({
+          clientID: 'c79d3e9ab497826bccc7',
+          clientSecret: '278ce1e586729635df6f626b07221ae1c6c67721',
+          repo: 'lazzyRabbit.github.io',
+          owner: 'lazzyRabbit',
+          admin: ['lazzyRabbit'],
+          id: id,      // Ensure uniqueness and length less than 50
+          title: document.title.split('|')[0],
+          distractionFreeMode: false  // Facebook-like distraction free mode
+        })
+
+        gitalk.render('gitalk-container')
+    </script>
+</section>
 
 
 

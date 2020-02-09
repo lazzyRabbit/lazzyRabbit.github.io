@@ -182,14 +182,7 @@
 <li>接口多、更灵活、封装了连接管理以及错误处理</li>
 <li>做了一个对consume的管理</li>
 </ul>
-<h3 id="框架"><a href="#框架" class="headerlink" title="框架"></a>框架</h3><figure class="image-bubble">
-                <div class="img-lightbox">
-                    <div class="overlay"></div>
-                    <img src="SimpleRabbitmqClient剖析/简单剖析图.png" alt="简单剖析图" title="">
-                </div>
-                <div class="image-caption">简单剖析图</div>
-            </figure>
-
+<h3 id="框架"><a href="#框架" class="headerlink" title="框架"></a>框架</h3><p><img src="SimpleRabbitmqClient%E5%89%96%E6%9E%90/%E7%AE%80%E5%8D%95%E5%89%96%E6%9E%90%E5%9B%BE.png" alt="简单剖析图"></p>
 <h3 id="剖析"><a href="#剖析" class="headerlink" title="剖析"></a>剖析</h3><h4 id="Channel"><a href="#Channel" class="headerlink" title="Channel"></a>Channel</h4><p>对rabbitmq的类型做了一个转换，就是做了一个普通封装，但是没有什么实际操作   </p>
 <p>其中包括:    </p>
 <ul>
@@ -328,27 +321,13 @@
     
 
 
-
-
-
-
-
-
 <section class="comments" id="comments">
-    <div id="gitment_thread"></div>
-    <link rel="stylesheet" href="//unpkg.com/gitment/style/default.css">
-    <script src="//unpkg.com/gitment/dist/gitment.browser.js"></script>
+    <div id="disqus_thread"></div>
     <script>
-        var gitment = new Gitment({
-            owner: 'lazzyRabbit',
-            repo: 'lazzyRabbit.github.io',
-            oauth: {
-                client_id: 'c79d3e9ab497826bccc7',
-                client_secret: '278ce1e586729635df6f626b07221ae1c6c67721',
-            },
-        })
-        gitment.render('comments')
+    var disqus_shortname = 'flase';
+    lazyScripts.push('//' + disqus_shortname + '.disqus.com/embed.js')
     </script>
+    <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" target="_blank" rel="noopener">comments powered by Disqus.</a></noscript>
 </section>
 
 
@@ -359,6 +338,36 @@
 
 
 
+
+
+
+
+
+
+
+<section class="comments" id="comments">
+    <div id="gitalk-container"></div>
+    <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+    <script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+    <script>
+        var id = location.pathname
+        if (location.pathname.length > 50) {
+          id = location.pathname.replace(/\/\d+\/\d+\/\d+\//, '').replace('/', '').substring(0, 50)
+        }
+        const gitalk = new Gitalk({
+          clientID: 'c79d3e9ab497826bccc7',
+          clientSecret: '278ce1e586729635df6f626b07221ae1c6c67721',
+          repo: 'lazzyRabbit.github.io',
+          owner: 'lazzyRabbit',
+          admin: ['lazzyRabbit'],
+          id: id,      // Ensure uniqueness and length less than 50
+          title: document.title.split('|')[0],
+          distractionFreeMode: false  // Facebook-like distraction free mode
+        })
+
+        gitalk.render('gitalk-container')
+    </script>
+</section>
 
 
 
