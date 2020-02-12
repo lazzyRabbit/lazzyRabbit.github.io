@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html>
+<head>
+    
+
+    
+
+    
+
+
+
+    <meta charset="utf-8">
+    
+    
+    
+    
+    <title>关于Eventloopthreatpool的简单剖析 | 懒散集</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    
+    <meta name="theme-color" content="#2182C7">
+    
+    
+    <meta name="keywords" content="muduo">
+    <meta name="description" content="最近对 muduo 库本身的 eventloopthreadpool 做了一个简单的剖析，写一个简单的总结，首先，我觉得简单介绍一下: eventloopthreadpool 是基于 muduo 库中 Tcpserver 这个类专门做的一个线程池，它的模式属于半同步半异步，每一个线程中都有一个自己的 eventloop，而每一个 eventloop 底层都是一个 poll 或者 epoll，它利用">
+<meta property="og:type" content="article">
+<meta property="og:title" content="关于Eventloopthreatpool的简单剖析">
+<meta property="og:url" content="http://yoursite.com/2015/11/18/%E5%85%B3%E4%BA%8EEventloopthreatpool%E7%9A%84%E7%AE%80%E5%8D%95%E5%89%96%E6%9E%90/">
+<meta property="og:site_name" content="懒散集">
+<meta property="og:description" content="最近对 muduo 库本身的 eventloopthreadpool 做了一个简单的剖析，写一个简单的总结，首先，我觉得简单介绍一下: eventloopthreadpool 是基于 muduo 库中 Tcpserver 这个类专门做的一个线程池，它的模式属于半同步半异步，每一个线程中都有一个自己的 eventloop，而每一个 eventloop 底层都是一个 poll 或者 epoll，它利用">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://yoursite.com/2015/11/18/%E5%85%B3%E4%BA%8EEventloopthreatpool%E7%9A%84%E7%AE%80%E5%8D%95%E5%89%96%E6%9E%90/%E5%85%B3%E4%BA%8EEventloopthreatpool%E7%9A%84%E7%AE%80%E5%8D%95%E5%89%96%E6%9E%90/eventloopthreadpool%E7%9A%84%E7%BB%93%E6%9E%84%E5%9B%BE.jpeg">
+<meta property="article:published_time" content="2015-11-18T07:05:58.000Z">
+<meta property="article:modified_time" content="2020-02-12T16:23:26.788Z">
+<meta property="article:author" content="Zerber">
+<meta property="article:tag" content="muduo">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://yoursite.com/2015/11/18/%E5%85%B3%E4%BA%8EEventloopthreatpool%E7%9A%84%E7%AE%80%E5%8D%95%E5%89%96%E6%9E%90/%E5%85%B3%E4%BA%8EEventloopthreatpool%E7%9A%84%E7%AE%80%E5%8D%95%E5%89%96%E6%9E%90/eventloopthreadpool%E7%9A%84%E7%BB%93%E6%9E%84%E5%9B%BE.jpeg">
+    
+    <link rel="shortcut icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/css/style.css?v=1.7.2">
+    <script>window.lazyScripts=[]</script>
+
+    <!-- custom head -->
+    
+
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+<body>
+    <div id="loading" class="active"></div>
+
+    <aside id="menu" class="hide" >
+  <div class="inner flex-row-vertical">
+    <a href="javascript:;" class="header-icon waves-effect waves-circle waves-light" id="menu-off">
+        <i class="icon icon-lg icon-close"></i>
+    </a>
+    <div class="brand-wrap" style="background-image:url(/img/kaku.jpeg)">
+      <div class="brand">
+        <a href="/null" class="avatar waves-effect waves-circle waves-light">
+          <img src="/img/miao2.jpeg">
+        </a>
+        <hgroup class="introduce">
+          <h5 class="nickname">Zerber</h5>
+          <a href="mailto:暂时就不贴邮箱了" title="暂时就不贴邮箱了" class="mail">暂时就不贴邮箱了</a>
+        </hgroup>
+      </div>
+    </div>
+    <div class="scroll-wrap flex-col">
+      <ul class="nav">
+        
+            <li class="waves-block waves-effect">
+              <a href="/"  >
+                <i class="icon icon-lg icon-home"></i>
+                主页
+              </a>
+            </li>
+        
+            <li class="waves-block waves-effect">
+              <a href="/archives"  >
+                <i class="icon icon-lg icon-archives"></i>
+                Archives
+              </a>
+            </li>
+        
+            <li class="waves-block waves-effect">
+              <a href="/tags"  >
+                <i class="icon icon-lg icon-tags"></i>
+                Tags
+              </a>
+            </li>
+        
+            <li class="waves-block waves-effect">
+              <a href="https://twitter.com/Zerber_" target="_blank" >
+                <i class="icon icon-lg icon-twitter"></i>
+                Twitter
+              </a>
+            </li>
+        
+      </ul>
+    </div>
+  </div>
+</aside>
+
+    <main id="main">
+        <header class="top-header" id="header">
+    <div class="flex-row">
+        <a href="javascript:;" class="header-icon waves-effect waves-circle waves-light on" id="menu-toggle">
+          <i class="icon icon-lg icon-navicon"></i>
+        </a>
+        <div class="flex-col header-title ellipsis">关于Eventloopthreatpool的简单剖析</div>
+        
+        <div class="search-wrap" id="search-wrap">
+            <a href="javascript:;" class="header-icon waves-effect waves-circle waves-light" id="back">
+                <i class="icon icon-lg icon-chevron-left"></i>
+            </a>
+            <input type="text" id="key" class="search-input" autocomplete="off" placeholder="Search">
+            <a href="javascript:;" class="header-icon waves-effect waves-circle waves-light" id="search">
+                <i class="icon icon-lg icon-search"></i>
+            </a>
+        </div>
+        
+        
+        <a href="javascript:;" class="header-icon waves-effect waves-circle waves-light" id="menuShare">
+            <i class="icon icon-lg icon-share-alt"></i>
+        </a>
+        
+    </div>
+</header>
+<header class="content-header post-header">
+
+    <div class="container fade-scale">
+        <h1 class="title">关于Eventloopthreatpool的简单剖析</h1>
+        <h5 class="subtitle">
+            
+                <time datetime="2015-11-18T07:05:58.000Z" itemprop="datePublished" class="page-time">
+  2015-11-18
+</time>
+
+
+            
+        </h5>
+    </div>
+
+    
+
+
+</header>
+
+
+<div class="container body-wrap">
+    
+
+<article id="post-关于Eventloopthreatpool的简单剖析"
+  class="post-article article-type-post fade" itemprop="blogPost">
+
+    <div class="post-card">
+        <h1 class="post-card-title">关于Eventloopthreatpool的简单剖析</h1>
+        <div class="post-meta">
+            <time class="post-time" title="2015-11-18 15:05:58" datetime="2015-11-18T07:05:58.000Z"  itemprop="datePublished">2015-11-18</time>
+
+            
+
+
+            
+
+        </div>
+        <div class="post-content" id="post-content" itemprop="postContent">
+            <p>最近对 muduo 库本身的 eventloopthreadpool 做了一个简单的剖析，写一个简单的总结，首先，我觉得简单介绍一下:</p>
+<p>eventloopthreadpool 是基于 muduo 库中 Tcpserver 这个类专门做的一个线程池，它的模式属于半同步半异步，每一个线程中都有一个自己的 eventloop，而每一个 eventloop 底层都是一个 poll 或者 epoll，它利用了自身的 poll 或者 epoll 在没有时间的时候阻塞住，在有时间发生的时候，epoll 监听到了时间就会去处理事件。我们来画一下图，模式大概是这样的:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">(轮询箭头)------&gt;|----------eventloopthread[0]--------Thread(处理)</span><br><span class="line">                |</span><br><span class="line">baseloop-------&gt;|-----eventloopthread[1]--------Thread(处理)</span><br><span class="line">(Accept)        |</span><br><span class="line">                |-----eventloopthread[2]--------Thread(处理)</span><br></pre></td></tr></table></figure>
+
+<p>好，线程池的结构大概是这样子，说到这个线程池，我们首先不得不说一个玩意，互斥锁，在muduo库中，对互斥锁进行了很好的一个封装，我们来看一下:</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">MutexLockGuard</span> :</span> boost::noncopyable</span><br><span class="line">&#123;</span><br><span class="line"> <span class="keyword">public</span>:</span><br><span class="line">  <span class="function"><span class="keyword">explicit</span> <span class="title">MutexLockGuard</span><span class="params">(MutexLock&amp; mutex)</span></span></span><br><span class="line"><span class="function">    : <span class="title">mutex_</span><span class="params">(mutex)</span></span></span><br><span class="line"><span class="function">  </span>&#123;</span><br><span class="line">    mutex_.lock();</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  ~MutexLockGuard()</span><br><span class="line">  &#123;</span><br><span class="line">    mutex_.unlock();</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line"> <span class="keyword">private</span>:</span><br><span class="line"></span><br><span class="line">  MutexLock&amp; mutex_;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>这就是我说的互斥锁，这是对它进行的一层封装，</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">lock</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">  MCHECK(pthread_mutex_lock(&amp;mutex_));</span><br><span class="line">  assignHolder();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">unlock</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">  unassignHolder();</span><br><span class="line">  MCHECK(pthread_mutex_unlock(&amp;mutex_));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>我将它内部的代码展示出来大家可以很清楚的看到这是一个锁的封装了吧，这个锁最大的好处在于它比较智能，当我们创建它的时候，构造函数会自动帮我们生成一个锁，当我们在区域内，创造一个锁的时候，它会锁住，当出了这个区域的时候，锁自动解开。</p>
+<p>现在我们来分析一下主要流程:</p>
+<figure class="image-bubble">
+                <div class="img-lightbox">
+                    <div class="overlay"></div>
+                    <img src="关于Eventloopthreatpool的简单剖析/eventloopthreadpool的结构图.jpeg" alt="eventloopthreadpool的结构图" title="">
+                </div>
+                <div class="image-caption">eventloopthreadpool的结构图</div>
+            </figure>
+
+<p>我们主要通过这个图去分析它的整体框架，看这个线程池到底做了个啥事，如何多个线程同时运作的。</p>
+<p>我们先分析一下它的类中用到成员变量和每个类的构造函数</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Condition</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">    MutexLock&amp; mutex_;<span class="comment">//锁</span></span><br><span class="line">    <span class="keyword">pthread_cond_t</span> pcond_;<span class="comment">//条件变量</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">EventLoopThreadPool</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">  EventLoop* baseLoop_; <span class="comment">//基于接受主线程socket的eventloop</span></span><br><span class="line">  <span class="keyword">bool</span> started_; <span class="comment">//线程池是否开始运作</span></span><br><span class="line">  <span class="keyword">int</span> numThreads_; <span class="comment">//线程的数量</span></span><br><span class="line">  boost::ptr_vector&lt;EventLoopThread&gt; threads_; <span class="comment">//线程池</span></span><br><span class="line">  <span class="built_in">std</span>::<span class="built_in">vector</span>&lt;EventLoop*&gt; loops_; <span class="comment">//线程池中的eventloop数组</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">EventLoopThread</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">  EventLoop* loop_; <span class="comment">//基于接受主线程socket的eventloop</span></span><br><span class="line">  Thread thread_; <span class="comment">//线程</span></span><br><span class="line">  MutexLock mutex_; <span class="comment">//锁</span></span><br><span class="line">  Condition cond_; <span class="comment">//条件变量</span></span><br><span class="line">  ThreadInitCallback callback_; <span class="comment">//外部参数以获得线程信息</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Thread</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">  <span class="keyword">pthread_t</span>  pthreadId_; <span class="comment">//线程ID</span></span><br><span class="line">  ThreadFunc func_; <span class="comment">//线程函数</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">ThreadData</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">  <span class="keyword">typedef</span> muduo::Thread::ThreadFunc ThreadFunc;</span><br><span class="line">  ThreadFunc func_; <span class="comment">//线程函数</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>我们看，它首先是从eventloopthreadpool中的start()这个函数当入口启动这个线程池的，内部有一个for循环，经过这个for循环就创建了一个线程池。</p>
+<p>我们看，它创建了一个eventloop对象，并且把这个对象压入了eventloopthread的数组当中，并且提取出了它里面的eventloop压入了loops当中。</p>
+<p>继续往下走，看下startloop干了个啥，是不是调用了一个thread.start()啊，底下加了个锁，锁底下的代码段是对主线程阻塞的一个判断，暂时先不理它。</p>
+<p>继续往下走，进入thread中的start()，thread中的start()干了一件事，创建了一个ThreadData并且当做参数放入了线程函数当中，这个线程函数又是个啥玩意？是个startThread()对不对，接着进去，诶，有一个名叫runInThread()的函数，接着进入runInThread()，诶，发现了一些神奇的事，话不多说，上代码:</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">runInThread</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">  <span class="keyword">try</span></span><br><span class="line">  &#123;</span><br><span class="line">    func_();</span><br><span class="line">    muduo::CurrentThread::t_threadName = <span class="string">"finished"</span>;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>诶嘿，发现没有，这里调用了一个func_()，很眼熟吧，好像在前面见过，进入ThreadData的构造函数，func_()是啥，实质上是一个<strong>boost::function&lt; void () &gt;</strong>的函数回调指针。我们发现这里给func_()赋值,赋值也是外部传进来的，往回走，发现它调用的是Thread中start()的func_(),Thread中start()的func_()也是别人构造函数里面赋值的继续往前走，Eventloopthread在创建thread的时候给他赋了一个值，这个值就是 <strong>func_()</strong>，这个 func_() 实质上就是 Eventloop 中的 threadFunc()，诶，进去看一下，一个临时变量的Eventloop，先调用了一下 callback，先不理它，看后面，给Eventloop 中的loop_ 赋值，然后调用一个 notify()，往回看， notify()实质上就是一个 <strong>pthread_cond_signal(&amp;pcond_)</strong>，而我们之前Eventloop中看到有一个成员 Condition cond_ 这实际上就是对条件变量的一个封装。</p>
+<p>此处有一个<strong>pthread_cond_signal</strong>，它要唤醒一个线程，唤醒哪个线程，诶这个不清楚，记得前面有一个cond_.wait() 对不对，它要唤醒这个cond_.wait()在startloop中，刚开始不知道它是干嘛的，现在知道了，当我们子线程创建的时候，它要创建一个eventloop啊，在还没保证它创建之前，我们的主线程不能继续往下创建新的线程，必须要等这个eventloop创建完成才能继续往下创建，因为eventloop才是这每一个线程的核心啊，当eventloop没创建完成时，我们会让其锁住，并让它成为阻塞状态，等到eventloop创建完成时，才会让主线程继续运行，继续创建下一个。</p>
+<p>往下走你会发现它调用了<strong>loop.loop()</strong>，实质上调用了 poll 或者epoll ，利用其自身的阻塞性将线程给阻塞住了。</p>
+<p>当我们完成这一步以后，我们还得回归一下前面一个地方，值得注意的地方就是在eventloopthreadpool中，它把每一个eventloop都提取出来放到一个数组loops中了，这样我们在提取它的loop是更方便了不是吗？</p>
+<p>看到这我们大概会明白它的创建机制了吧。</p>
+<p>创建好了要将其使用，咋用，话不多说上代码:</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">TcpServer::newConnection</span><span class="params">(<span class="keyword">int</span> sockfd, <span class="keyword">const</span> InetAddress&amp; peerAddr)</span></span></span><br><span class="line"><span class="function"></span>&#123;  </span><br><span class="line"> EventLoop* ioLoop = threadPool_-&gt;getNextLoop();</span><br><span class="line"> <span class="function">TcpConnectionPtr <span class="title">conn</span><span class="params">(<span class="keyword">new</span> TcpConnection(ioLoop,connName,sockfd,localAddr,peerAddr);</span></span></span><br><span class="line"><span class="function"><span class="params"></span></span></span><br><span class="line"><span class="function"><span class="params">  connections_[connName] = conn;</span></span></span><br><span class="line"><span class="function"><span class="params">  conn-&gt;setConnectionCallback(connectionCallback_);</span></span></span><br><span class="line"><span class="function"><span class="params">  conn-&gt;setMessageCallback(messageCallback_);</span></span></span><br><span class="line"><span class="function"><span class="params">  conn-&gt;setWriteCompleteCallback(writeCompleteCallback_);</span></span></span><br><span class="line"><span class="function"><span class="params">  conn-&gt;setCloseCallback(</span></span></span><br><span class="line"><span class="function"><span class="params">      boost::bind(&amp;TcpServer::removeConnection, <span class="keyword">this</span>, _1)); <span class="comment">// <span class="doctag">FIXME:</span> unsafe</span></span></span></span><br><span class="line"><span class="function"><span class="params">  ioLoop-&gt;runInLoop(boost::bind(&amp;TcpConnection::connectEstablished, conn));</span></span></span><br><span class="line"><span class="function"><span class="params"> &#125;</span></span></span><br></pre></td></tr></table></figure>
+
+<p>这是TcpServer中的TcpServer::newConnection()，调用了<strong>threadPool_-&gt;getNextLoop()</strong> ，当我们分析过muduo库我们会知道，当TcpServer中的主线程每收到一个新的socket的时候，我们就将socket时间放到子线程中的eventloop中去处理，也就是说不同的子线程中的eventloop会有不同的socket，当我们不同的socket接受到消息的时候会在不同的子线程中同时处理，也就是说这样就大大提高了效率。</p>
+<p>我们进<strong>threadPool_-&gt;getNextLoop()</strong> 中看看，我们会发现，它是轮询的调用eventloop的，也就是说主线程分配的socket是轮询进入不同的eventloop中的。</p>
+<p><strong>最后再总结一下：</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">1、eventloopthreadpool是一个半同步半异步的机制</span><br><span class="line">2、eventloopthreadpool实际上是其中包含了一个eventloopthread的数组，而每一个eventloopthread对象实际上都管理着一个Thread，而每一个Thread对象实际上就是对一个线程的封装</span><br><span class="line">3、每一个eventloopthread对应一个线程，每一个eventloopthread又包含一个eventloop，也就是相当于一个线程对应一个eventloop，在不同的线程操作着不同的eventloop，实际上就是同时操作不同的poll或者epoll，效率大大的提高了</span><br><span class="line">4、当我们从主线程的eventloop中的Accept中listen到一个新的socket后轮询的发给每一个eventloop中，交由不同的eventloop去处理</span><br><span class="line">5、它实质上的线程函数是void EventLoopThread::threadFunc()</span><br><span class="line">6、值得注意的一点是eventloop在每个线程中的loop还没有创建出来之前会阻塞住主线程，而在loop创建出来之后主线程释放，运行到下面loop.loop()后，会利用poll或者epoll自身的阻塞将线程阻塞住并进入循环接受消息的状态(PS:线程池每一条线程在不用的时候自身都必须进入阻塞状态，否则线程运行完就会释放了，线程池也就没什么意义了)，下面的loop_ &#x3D; NULL;也就不会执行了。</span><br></pre></td></tr></table></figure>
+
+<p>好了，大概就是总结了那么多。。。</p>
+
+        </div>
+
+        <blockquote class="post-copyright">
+    
+    <div class="content">
+        
+<span class="post-time">
+    Last updated: <time datetime="2020-02-12T16:23:26.788Z" itemprop="dateUpdated">2020-02-13 00:23:26</time>
+</span><br>
+
+
+        
+    </div>
+    
+    <footer>
+        <a href="http://yoursite.com">
+            <img src="/img/miao2.jpeg" alt="Zerber">
+            Zerber
+        </a>
+    </footer>
+</blockquote>
+
+        
+
+
+        <div class="post-footer">
+            
+	<ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/muduo/" rel="tag">muduo</a></li></ul>
+
+
+            
+<div class="page-share-wrap">
+    
+
+<div class="page-share" id="pageShare">
+    <ul class="reset share-icons">
+      <li>
+        <a class="weibo share-sns" target="_blank" href="http://service.weibo.com/share/share.php?url=http://yoursite.com/2015/11/18/%E5%85%B3%E4%BA%8EEventloopthreatpool%E7%9A%84%E7%AE%80%E5%8D%95%E5%89%96%E6%9E%90/&title=《关于Eventloopthreatpool的简单剖析》 — 懒散集&pic=http://yoursite.com/img/miao2.jpeg" data-title="微博">
+          <i class="icon icon-weibo"></i>
+        </a>
+      </li>
+      <li>
+        <a class="weixin share-sns wxFab" href="javascript:;" data-title="微信">
+          <i class="icon icon-weixin"></i>
+        </a>
+      </li>
+      <li>
+        <a class="qq share-sns" target="_blank" href="http://connect.qq.com/widget/shareqq/index.html?url=http://yoursite.com/2015/11/18/%E5%85%B3%E4%BA%8EEventloopthreatpool%E7%9A%84%E7%AE%80%E5%8D%95%E5%89%96%E6%9E%90/&title=《关于Eventloopthreatpool的简单剖析》 — 懒散集&source=" data-title=" QQ">
+          <i class="icon icon-qq"></i>
+        </a>
+      </li>
+      <li>
+        <a class="facebook share-sns" target="_blank" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2015/11/18/%E5%85%B3%E4%BA%8EEventloopthreatpool%E7%9A%84%E7%AE%80%E5%8D%95%E5%89%96%E6%9E%90/" data-title=" Facebook">
+          <i class="icon icon-facebook"></i>
+        </a>
+      </li>
+      <li>
+        <a class="twitter share-sns" target="_blank" href="https://twitter.com/intent/tweet?text=《关于Eventloopthreatpool的简单剖析》 — 懒散集&url=http://yoursite.com/2015/11/18/%E5%85%B3%E4%BA%8EEventloopthreatpool%E7%9A%84%E7%AE%80%E5%8D%95%E5%89%96%E6%9E%90/&via=http://yoursite.com" data-title=" Twitter">
+          <i class="icon icon-twitter"></i>
+        </a>
+      </li>
+      <li>
+        <a class="google share-sns" target="_blank" href="https://plus.google.com/share?url=http://yoursite.com/2015/11/18/%E5%85%B3%E4%BA%8EEventloopthreatpool%E7%9A%84%E7%AE%80%E5%8D%95%E5%89%96%E6%9E%90/" data-title=" Google+">
+          <i class="icon icon-google-plus"></i>
+        </a>
+      </li>
+    </ul>
+ </div>
+
+
+
+    <a href="javascript:;" id="shareFab" class="page-share-fab waves-effect waves-circle">
+        <i class="icon icon-share-alt icon-lg"></i>
+    </a>
+</div>
+
+
+
+        </div>
+    </div>
+
+    
+<nav class="post-nav flex-row flex-justify-between">
+  
+    <div class="waves-block waves-effect prev">
+      <a href="/2016/04/18/linux%E4%B8%8B%E7%9A%84%E5%A4%9A%E7%A7%8D%E8%B0%83%E8%AF%95%E6%96%B9%E6%B3%95/" id="post-prev" class="post-nav-link">
+        <div class="tips"><i class="icon icon-angle-left icon-lg icon-pr"></i> Prev</div>
+        <h4 class="title">linux下的多种调试方法</h4>
+      </a>
+    </div>
+  
+
+  
+</nav>
+
+
+
+    
+
+
+<section class="comments" id="comments">
+    <div id="disqus_thread"></div>
+    <script>
+    var disqus_shortname = 'true';
+    lazyScripts.push('//' + disqus_shortname + '.disqus.com/embed.js')
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" target="_blank" rel="noopener">comments powered by Disqus.</a></noscript>
+</section>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</article>
+
+
+
+</div>
+
+        <footer class="footer">
+    <div class="top">
+        
+
+        <p>
+            
+            <span>This blog is licensed under a <a rel="license noopener" href="https://creativecommons.org/licenses/by/4.0/" target="_blank">Creative Commons Attribution 4.0 International License</a>.</span>
+        </p>
+    </div>
+    <div class="bottom">
+        <p><span>Zerber &copy; 2020</span>
+            <span>
+                
+                Power by <a href="http://hexo.io/" target="_blank">Hexo</a> Theme <a href="https://github.com/yscoder/hexo-theme-indigo" target="_blank">indigo</a>
+            </span>
+        </p>
+    </div>
+</footer>
+
+    </main>
+    <div class="mask" id="mask"></div>
+<a href="javascript:;" id="gotop" class="waves-effect waves-circle waves-light"><span class="icon icon-lg icon-chevron-up"></span></a>
+
+
+
+<div class="global-share" id="globalShare">
+    <ul class="reset share-icons">
+      <li>
+        <a class="weibo share-sns" target="_blank" href="http://service.weibo.com/share/share.php?url=http://yoursite.com/2015/11/18/%E5%85%B3%E4%BA%8EEventloopthreatpool%E7%9A%84%E7%AE%80%E5%8D%95%E5%89%96%E6%9E%90/&title=《关于Eventloopthreatpool的简单剖析》 — 懒散集&pic=http://yoursite.com/img/miao2.jpeg" data-title="微博">
+          <i class="icon icon-weibo"></i>
+        </a>
+      </li>
+      <li>
+        <a class="weixin share-sns wxFab" href="javascript:;" data-title="微信">
+          <i class="icon icon-weixin"></i>
+        </a>
+      </li>
+      <li>
+        <a class="qq share-sns" target="_blank" href="http://connect.qq.com/widget/shareqq/index.html?url=http://yoursite.com/2015/11/18/%E5%85%B3%E4%BA%8EEventloopthreatpool%E7%9A%84%E7%AE%80%E5%8D%95%E5%89%96%E6%9E%90/&title=《关于Eventloopthreatpool的简单剖析》 — 懒散集&source=" data-title=" QQ">
+          <i class="icon icon-qq"></i>
+        </a>
+      </li>
+      <li>
+        <a class="facebook share-sns" target="_blank" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2015/11/18/%E5%85%B3%E4%BA%8EEventloopthreatpool%E7%9A%84%E7%AE%80%E5%8D%95%E5%89%96%E6%9E%90/" data-title=" Facebook">
+          <i class="icon icon-facebook"></i>
+        </a>
+      </li>
+      <li>
+        <a class="twitter share-sns" target="_blank" href="https://twitter.com/intent/tweet?text=《关于Eventloopthreatpool的简单剖析》 — 懒散集&url=http://yoursite.com/2015/11/18/%E5%85%B3%E4%BA%8EEventloopthreatpool%E7%9A%84%E7%AE%80%E5%8D%95%E5%89%96%E6%9E%90/&via=http://yoursite.com" data-title=" Twitter">
+          <i class="icon icon-twitter"></i>
+        </a>
+      </li>
+      <li>
+        <a class="google share-sns" target="_blank" href="https://plus.google.com/share?url=http://yoursite.com/2015/11/18/%E5%85%B3%E4%BA%8EEventloopthreatpool%E7%9A%84%E7%AE%80%E5%8D%95%E5%89%96%E6%9E%90/" data-title=" Google+">
+          <i class="icon icon-google-plus"></i>
+        </a>
+      </li>
+    </ul>
+ </div>
+
+
+<div class="page-modal wx-share" id="wxShare">
+    <a class="close" href="javascript:;"><i class="icon icon-close"></i></a>
+    <p>扫一扫，分享到微信</p>
+    <img src="//api.qrserver.com/v1/create-qr-code/?data=http://yoursite.com/2015/11/18/%E5%85%B3%E4%BA%8EEventloopthreatpool%E7%9A%84%E7%AE%80%E5%8D%95%E5%89%96%E6%9E%90/" alt="微信分享二维码">
+</div>
+
+
+
+
+    <script src="//cdn.bootcss.com/node-waves/0.7.4/waves.min.js"></script>
+<script>
+var BLOG = { ROOT: '/', SHARE: true, REWARD: false };
+
+
+</script>
+
+<script src="/js/main.min.js?v=1.7.2"></script>
+
+
+<div class="search-panel" id="search-panel">
+    <ul class="search-result" id="search-result"></ul>
+</div>
+<template id="search-tpl">
+<li class="item">
+    <a href="{path}" class="waves-block waves-effect">
+        <div class="title ellipsis" title="{title}">{title}</div>
+        <div class="flex-row flex-middle">
+            <div class="tags ellipsis">
+                {tags}
+            </div>
+            <time class="flex-col time">{date}</time>
+        </div>
+    </a>
+</li>
+</template>
+
+<script src="/js/search.min.js?v=1.7.2" async></script>
+
+
+
+
+
+
+
+
+<script>
+(function() {
+    var OriginTitile = document.title, titleTime;
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+            document.title = '倒是希望你快点回家了=   =！';
+            clearTimeout(titleTime);
+        } else {
+            document.title = '(つェ⊂)咦!又好了!';
+            titleTime = setTimeout(function() {
+                document.title = OriginTitile;
+            },2000);
+        }
+    });
+})();
+</script>
+
+
+
+</body>
+</html>

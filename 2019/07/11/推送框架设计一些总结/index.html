@@ -30,7 +30,7 @@
 <meta property="og:locale" content="en_US">
 <meta property="og:image" content="http://yoursite.com/2019/07/11/%E6%8E%A8%E9%80%81%E6%A1%86%E6%9E%B6%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%BA%9B%E6%80%BB%E7%BB%93/%E6%8E%A8%E9%80%81%E6%A1%86%E6%9E%B6%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%BA%9B%E6%80%BB%E7%BB%93/%E6%8E%A8%E9%80%81%E6%95%B4%E4%BD%93%E5%9B%BE.png">
 <meta property="article:published_time" content="2019-07-10T16:03:35.000Z">
-<meta property="article:modified_time" content="2020-02-08T11:42:33.910Z">
+<meta property="article:modified_time" content="2020-02-12T16:23:22.456Z">
 <meta property="article:author" content="Zerber">
 <meta property="article:tag" content="群发与推送">
 <meta name="twitter:card" content="summary">
@@ -182,7 +182,14 @@
 <li><a href="#群发核心分析">群发核心分析</a></li>
 </ul>
 <h3 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h3><p>群发系统其实和推送系统是很类似的，都是通过服务器这个中间载体向用户大规模的去推发消息，架构是类似的，但是又不是尽完全相同的，本篇文章会对推送和群发的对比，来说明推送框架设计的核心。</p>
-<h3 id="架构设计"><a href="#架构设计" class="headerlink" title="架构设计"></a>架构设计</h3><p><img src="%E6%8E%A8%E9%80%81%E6%A1%86%E6%9E%B6%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%BA%9B%E6%80%BB%E7%BB%93/%E6%8E%A8%E9%80%81%E6%95%B4%E4%BD%93%E5%9B%BE.png" alt="推送框架"></p>
+<h3 id="架构设计"><a href="#架构设计" class="headerlink" title="架构设计"></a>架构设计</h3><figure class="image-bubble">
+                <div class="img-lightbox">
+                    <div class="overlay"></div>
+                    <img src="推送框架设计一些总结/推送整体图.png" alt="推送框架" title="">
+                </div>
+                <div class="image-caption">推送框架</div>
+            </figure>
+
 <p>[此处图片暂时省略。。。]</p>
 <p>Server服务 –&gt; route –&gt; cs –&gt; client</p>
 <h3 id="功能与接口的设计"><a href="#功能与接口的设计" class="headerlink" title="功能与接口的设计"></a>功能与接口的设计</h3><p>推送所需要的功能是保证在长连接连接上App以后，能及时推送消息到用户手机上，以及做好统计记录，所以这其中有几个点是我们在设计接口时需要考虑的。</p>
@@ -225,7 +232,7 @@
     <div class="content">
         
 <span class="post-time">
-    Last updated: <time datetime="2020-02-08T11:42:33.910Z" itemprop="dateUpdated">2020-02-08 19:42:33</time>
+    Last updated: <time datetime="2020-02-12T16:23:22.456Z" itemprop="dateUpdated">2020-02-13 00:23:22</time>
 </span><br>
 
 
