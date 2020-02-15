@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html>
+<head>
+    
+
+    
+
+    
+
+
+
+    <meta charset="utf-8">
+    
+    
+    
+    
+    <title>Muduo库的框架剖析及总结(二) | 懒散集</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    
+    <meta name="theme-color" content="#2182C7">
+    
+    
+    <meta name="keywords" content="Muduo">
+    <meta name="description" content="我觉得可能由于我可能要分析完这几个大的模块可能并非易事，要仔细的分析也是绝壁很困难，我写的文章带有很多的口水话，一方面我是希望用通俗的语言去解释这些东西大家能更加好的去理解，另一面可以让我自己更加方便在日后看的时候不至于蒙了">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Muduo库的框架剖析及总结(二)">
+<meta property="og:url" content="http://yoursite.com/2016/08/06/Muduo%E5%BA%93%E7%9A%84%E6%A1%86%E6%9E%B6%E5%89%96%E6%9E%90%E5%8F%8A%E6%80%BB%E7%BB%93(%E4%BA%8C)/">
+<meta property="og:site_name" content="懒散集">
+<meta property="og:description" content="我觉得可能由于我可能要分析完这几个大的模块可能并非易事，要仔细的分析也是绝壁很困难，我写的文章带有很多的口水话，一方面我是希望用通俗的语言去解释这些东西大家能更加好的去理解，另一面可以让我自己更加方便在日后看的时候不至于蒙了">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2016-08-06T05:41:46.000Z">
+<meta property="article:modified_time" content="2020-02-15T15:57:20.354Z">
+<meta property="article:author" content="Zerber">
+<meta property="article:tag" content="Muduo">
+<meta name="twitter:card" content="summary">
+    
+    <link rel="shortcut icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/css/style.css?v=1.7.2">
+    <script>window.lazyScripts=[]</script>
+
+    <!-- custom head -->
+    
+
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+<body>
+    <div id="loading" class="active"></div>
+
+    <aside id="menu" class="hide" >
+  <div class="inner flex-row-vertical">
+    <a href="javascript:;" class="header-icon waves-effect waves-circle waves-light" id="menu-off">
+        <i class="icon icon-lg icon-close"></i>
+    </a>
+    <div class="brand-wrap" style="background-image:url(/img/kaku.jpeg)">
+      <div class="brand">
+        <a href="/null" class="avatar waves-effect waves-circle waves-light">
+          <img src="/img/miao2.jpeg">
+        </a>
+        <hgroup class="introduce">
+          <h5 class="nickname">Zerber</h5>
+          <a href="mailto:暂时就不贴邮箱了" title="暂时就不贴邮箱了" class="mail">暂时就不贴邮箱了</a>
+        </hgroup>
+      </div>
+    </div>
+    <div class="scroll-wrap flex-col">
+      <ul class="nav">
+        
+            <li class="waves-block waves-effect">
+              <a href="/"  >
+                <i class="icon icon-lg icon-home"></i>
+                主页
+              </a>
+            </li>
+        
+            <li class="waves-block waves-effect">
+              <a href="/archives"  >
+                <i class="icon icon-lg icon-archives"></i>
+                Archives
+              </a>
+            </li>
+        
+            <li class="waves-block waves-effect">
+              <a href="/tags"  >
+                <i class="icon icon-lg icon-tags"></i>
+                Tags
+              </a>
+            </li>
+        
+            <li class="waves-block waves-effect">
+              <a href="https://twitter.com/Zerber_" target="_blank" >
+                <i class="icon icon-lg icon-twitter"></i>
+                Twitter
+              </a>
+            </li>
+        
+      </ul>
+    </div>
+  </div>
+</aside>
+
+    <main id="main">
+        <header class="top-header" id="header">
+    <div class="flex-row">
+        <a href="javascript:;" class="header-icon waves-effect waves-circle waves-light on" id="menu-toggle">
+          <i class="icon icon-lg icon-navicon"></i>
+        </a>
+        <div class="flex-col header-title ellipsis">Muduo库的框架剖析及总结(二)</div>
+        
+        <div class="search-wrap" id="search-wrap">
+            <a href="javascript:;" class="header-icon waves-effect waves-circle waves-light" id="back">
+                <i class="icon icon-lg icon-chevron-left"></i>
+            </a>
+            <input type="text" id="key" class="search-input" autocomplete="off" placeholder="Search">
+            <a href="javascript:;" class="header-icon waves-effect waves-circle waves-light" id="search">
+                <i class="icon icon-lg icon-search"></i>
+            </a>
+        </div>
+        
+        
+        <a href="javascript:;" class="header-icon waves-effect waves-circle waves-light" id="menuShare">
+            <i class="icon icon-lg icon-share-alt"></i>
+        </a>
+        
+    </div>
+</header>
+<header class="content-header post-header">
+
+    <div class="container fade-scale">
+        <h1 class="title">Muduo库的框架剖析及总结(二)</h1>
+        <h5 class="subtitle">
+            
+                <time datetime="2016-08-06T05:41:46.000Z" itemprop="datePublished" class="page-time">
+  2016-08-06
+</time>
+
+
+            
+        </h5>
+    </div>
+
+    
+
+
+</header>
+
+
+<div class="container body-wrap">
+    
+
+<article id="post-Muduo库的框架剖析及总结(二)"
+  class="post-article article-type-post fade" itemprop="blogPost">
+
+    <div class="post-card">
+        <h1 class="post-card-title">Muduo库的框架剖析及总结(二)</h1>
+        <div class="post-meta">
+            <time class="post-time" title="2016-08-06 13:41:46" datetime="2016-08-06T05:41:46.000Z"  itemprop="datePublished">2016-08-06</time>
+
+            
+
+
+            
+
+        </div>
+        <div class="post-content" id="post-content" itemprop="postContent">
+            <p>我觉得可能由于我可能要分析完这几个大的模块可能并非易事，要仔细的分析也是绝壁很困难，我写的文章带有很多的口水话，一方面我是希望用通俗的语言去解释这些东西大家能更加好的去理解，另一面可以让我自己更加方便在日后看的时候不至于蒙了</p>
+<a id="more"></a>
+
+<p>上次我们已经介绍完了TcpServer这个大类，诶这个大类啊还真是一个非常犀利的一个类呢，小小一个类把服务器改做的事情的接口全部都封装得完美无缺，那么现在我觉得应该介绍一下TcpConnection和Acceptor这两个大类了</p>
+<p>我们先从TcpConnection这个大类开始说吧，我们前面说过，我们在Acceptor中设置了一个回调函数调用了TcpServer中的newconnection这个函数，不知道大家还有印象没</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">  acceptor_-&gt;setNewConnectionCallback(</span><br><span class="line">      boost::bind(&amp;TcpServer::newConnection, <span class="keyword">this</span>, _1, _2));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>当然这里也新建了一个新的<strong>Tcpconnection</strong>了，那我们就进<strong>Tcpconnection</strong>中去看一下<br>首先还是看它内部的成员变量：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">EventLoop* loop_;&#x2F;&#x2F;事件处理器指针</span><br><span class="line">const string name_;</span><br><span class="line">StateE state_;  &#x2F;&#x2F; FIXME: use atomic variable</span><br><span class="line">&#x2F;&#x2F; we don&#39;t expose those classes to client.</span><br><span class="line">boost::scoped_ptr&lt;Socket&gt; socket_;</span><br><span class="line">boost::scoped_ptr&lt;Channel&gt; channel_;&#x2F;&#x2F;封装了一个事件处理器</span><br><span class="line">const InetAddress localAddr_;&#x2F;&#x2F;端口号什么的</span><br><span class="line">const InetAddress peerAddr_;</span><br><span class="line">ConnectionCallback connectionCallback_;&#x2F;&#x2F;连接回调</span><br><span class="line">MessageCallback messageCallback_;&#x2F;&#x2F;信息回调</span><br><span class="line">WriteCompleteCallback writeCompleteCallback_;</span><br><span class="line">HighWaterMarkCallback highWaterMarkCallback_;</span><br><span class="line">CloseCallback closeCallback_;</span><br><span class="line">size_t highWaterMark_;</span><br><span class="line">Buffer inputBuffer_;</span><br><span class="line">Buffer outputBuffer_; &#x2F;&#x2F; FIXME: use list&lt;Buffer&gt; as output buffer.</span><br><span class="line">boost::any context_;</span><br></pre></td></tr></table></figure>
+
+<p>说句实在话，我觉得这里除了<strong>EventLoop</strong>、<strong>Channel</strong>、<strong>ConnectionCallback</strong>、<strong>MessageCallback</strong> 可以讨论一下，其它信息都跟主框架没有什么直接关系，哦，对了，还有个<strong>Buffer</strong>是起到缓冲区的作用</p>
+<p>前面我们有过说在<strong>TcpServer::newConnection</strong>中调用了一个<strong>TcpConnection::connectEstablished</strong>函数，其实现在我们可以先来看一下这个函数：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;有连接来的时候创建(顺带调用一下回调函数)</span><br><span class="line">void TcpConnection::connectEstablished()</span><br><span class="line">&#123;</span><br><span class="line">  loop_-&gt;assertInLoopThread();</span><br><span class="line">  assert(state_ &#x3D;&#x3D; kConnecting);</span><br><span class="line">  setState(kConnected);</span><br><span class="line">  channel_-&gt;tie(shared_from_this());</span><br><span class="line">  channel_-&gt;enableReading();</span><br><span class="line"></span><br><span class="line">  connectionCallback_(shared_from_this());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>我们可以看到它中间调用了一个比较重要的函数<strong>channel_-&gt;enableReading()</strong>，当然这个函数我们先记着，我暂时先告诉你们它的作用是注册时间，第二个它调用了<strong>connectionCallback_(shared_from_this())</strong>，这个我们也说过，在<strong>TcpServer::newConnection</strong>中它将connectionCallback和MessageCallback都注册了：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">conn-&gt;setConnectionCallback(connectionCallback_);</span><br><span class="line">conn-&gt;setMessageCallback(messageCallback_);</span><br></pre></td></tr></table></figure>
+
+<p>当然它又用同样的方式注册Channel事件中的回调函数，当然这个注册的过程在TcpConnection中的构造函数上咯：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">TcpConnection::TcpConnection(EventLoop* loop,</span><br><span class="line">                             <span class="keyword">const</span> <span class="built_in">string</span>&amp; nameArg,</span><br><span class="line">                             <span class="keyword">int</span> sockfd,</span><br><span class="line">                             <span class="keyword">const</span> InetAddress&amp; localAddr,</span><br><span class="line">                             <span class="keyword">const</span> InetAddress&amp; peerAddr)</span><br><span class="line">  : loop_(CHECK_NOTNULL(loop)),</span><br><span class="line">    name_(nameArg),</span><br><span class="line">    state_(kConnecting),</span><br><span class="line">    socket_(<span class="keyword">new</span> Socket(sockfd)),</span><br><span class="line">    channel_(<span class="keyword">new</span> Channel(loop, sockfd)),</span><br><span class="line">    localAddr_(localAddr),</span><br><span class="line">    peerAddr_(peerAddr),</span><br><span class="line">    highWaterMark_(<span class="number">64</span>*<span class="number">1024</span>*<span class="number">1024</span>)</span><br><span class="line">&#123;</span><br><span class="line">  channel_-&gt;setReadCallback(</span><br><span class="line">      boost::bind(&amp;TcpConnection::handleRead, <span class="keyword">this</span>, _1));</span><br><span class="line">  channel_-&gt;setWriteCallback(</span><br><span class="line">      boost::bind(&amp;TcpConnection::handleWrite, <span class="keyword">this</span>));</span><br><span class="line">  channel_-&gt;setCloseCallback(</span><br><span class="line">      boost::bind(&amp;TcpConnection::handleClose, <span class="keyword">this</span>));</span><br><span class="line">  channel_-&gt;setErrorCallback(</span><br><span class="line">      boost::bind(&amp;TcpConnection::handleError, <span class="keyword">this</span>));</span><br><span class="line">  LOG_DEBUG &lt;&lt; <span class="string">"TcpConnection::ctor["</span> &lt;&lt;  name_ &lt;&lt; <span class="string">"] at "</span> &lt;&lt; <span class="keyword">this</span></span><br><span class="line">            &lt;&lt; <span class="string">" fd="</span> &lt;&lt; sockfd;</span><br><span class="line">  socket_-&gt;setKeepAlive(<span class="literal">true</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>当然我们还知道Tcpconnection中还有好几个send()函数，当然，你要知道它们实际上是重载了，这些send()是回复给客户端用的了，在这里我就不想再具体介绍了</p>
+<p>下一个TcpConnection中比较重要的函数就是<strong>TcpConnection::handleRead</strong>了：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">TcpConnection::handleRead</span><span class="params">(Timestamp receiveTime)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">  loop_-&gt;assertInLoopThread();</span><br><span class="line">  <span class="keyword">int</span> savedErrno = <span class="number">0</span>;</span><br><span class="line">  <span class="comment">//此处调用了Buffer回调，这里会直接将readcv中得到的数据放入自己的Buffer中</span></span><br><span class="line">  <span class="keyword">ssize_t</span> n = inputBuffer_.readFd(channel_-&gt;fd(), &amp;savedErrno);</span><br><span class="line">  <span class="keyword">if</span> (n &gt; <span class="number">0</span>)</span><br><span class="line">  &#123;</span><br><span class="line">  <span class="comment">//此处调用了信息回调</span></span><br><span class="line">    messageCallback_(shared_from_this(), &amp;inputBuffer_, receiveTime);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">else</span> <span class="keyword">if</span> (n == <span class="number">0</span>)</span><br><span class="line">  &#123;</span><br><span class="line">    handleClose();</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">else</span></span><br><span class="line">  &#123;</span><br><span class="line">    errno = savedErrno;</span><br><span class="line">    LOG_SYSERR &lt;&lt; <span class="string">"TcpConnection::handleRead"</span>;</span><br><span class="line">    handleError();</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>我们前面也看见了在构造函数中，它把<strong>TcpConnection::handleRead</strong>注册到了Channel中的ReadCallback中，至于怎么做哦，后期我们说到了Channel再探讨这个话题。</p>
+<p>当然这个函数比较重要的两个地方还是：<br>1、<strong>ssize_t n = inputBuffer_.readFd(channel_-&gt;fd(), &amp;savedErrno);</strong>读取信息<br>2、<strong>messageCallback_(shared_from_this(), &amp;inputBuffer_, receiveTime);</strong>//这里的这个messageCallback当然是你可以自己编写内容的，就相当于逻辑处理由你自己处理，这个函数自己写，最后写成一个函数指针并用bind回调返回去调用这个你自己写的函数就好了。</p>
+<hr>
+<p>好了，对上面的地方我们就不要太过于去纠结了，接下来我们继续往下走，嗯接下来就说说Acceptor吧</p>
+<p>呃，我认为还是应该先看看它的成员变量</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">EventLoop* loop_;  <span class="comment">//需要指向一个主线程事件分发器</span></span><br><span class="line">Socket acceptSocket_;  <span class="comment">//这个主要指的是监听socket</span></span><br><span class="line">Channel acceptChannel_;  <span class="comment">//这个主要指的是将监听事件放入到eventloop中</span></span><br><span class="line">NewConnectionCallback newConnectionCallback_;  <span class="comment">//创建一个新的连接，就此建立那么一个回调</span></span><br><span class="line"><span class="keyword">bool</span> listenning_;</span><br><span class="line"><span class="keyword">int</span> idleFd_;</span><br></pre></td></tr></table></figure>
+
+<p>一个Eventloop指针，一个Socket对象，一个Channel事件对象，然后我们前面在TcpServer模块中说过newConnectionCallback_实际上就是TcpServer中的<strong>TcpServer::newConnection</strong></p>
+<p>好吧，我们这个时候再来看一下它的构造函数：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">Acceptor::Acceptor(EventLoop* loop, <span class="keyword">const</span> InetAddress&amp; listenAddr, <span class="keyword">bool</span> reuseport)</span><br><span class="line">  : loop_(loop),</span><br><span class="line">    acceptSocket_(sockets::createNonblockingOrDie()),</span><br><span class="line">    acceptChannel_(loop, acceptSocket_.fd()),</span><br><span class="line">    listenning_(<span class="literal">false</span>),</span><br><span class="line">    idleFd_(::<span class="built_in">open</span>(<span class="string">"/dev/null"</span>, O_RDONLY | O_CLOEXEC))</span><br><span class="line">&#123;</span><br><span class="line">  assert(idleFd_ &gt;= <span class="number">0</span>);</span><br><span class="line">  acceptSocket_.setReuseAddr(<span class="literal">true</span>);</span><br><span class="line">  acceptSocket_.setReusePort(reuseport);<span class="comment">//端口重用，多个tcp可以绑定相同的端口</span></span><br><span class="line">  acceptSocket_.bindAddress(listenAddr);</span><br><span class="line">  acceptChannel_.setReadCallback(</span><br><span class="line">      boost::bind(&amp;Acceptor::handleRead, <span class="keyword">this</span>));<span class="comment">//在有可读的fd的时候调用ReadCallback</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>我们可以看到它调用了这么一个函数<strong>acceptSocket_(sockets::createNonblockingOrDie())</strong>，这个<strong>sockets::createNonblockingOrDie()</strong>到底是干嘛用的呢？待会我们介绍socket的时候我们会介绍到，这个还是比较重要的</p>
+<p><strong>acceptChannel_(loop, acceptSocket_.fd())</strong>这个地方我们可以很明显的看出它启用了一个Channel对象，而这个Channel我在这里也可以说是跟监听socket相关</p>
+<p><strong>acceptChannel_.setReadCallback(boost::bind(&amp;Acceptor::handleRead, this));</strong>我们在这里也可以看到handleRead封装进了Acceptor中的Channel中，跟TcpConnection的作法是一样的，这里后期我们再讨论它的重要性</p>
+<p>前面我们说过调用newConnectionCallback_实际上就是调用了TcpServer中的<strong>TcpServer::newConnection</strong>，而我们什么时候调用它呢？那么就在我们刚刚所讨论到的HandleRead中</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//对读事件的处理</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">Acceptor::handleRead</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">  loop_-&gt;assertInLoopThread();</span><br><span class="line">  InetAddress peerAddr;</span><br><span class="line">  <span class="comment">//FIXME loop until no more</span></span><br><span class="line">  <span class="keyword">int</span> connfd = acceptSocket_.accept(&amp;peerAddr);</span><br><span class="line">  <span class="keyword">if</span> (connfd &gt;= <span class="number">0</span>)</span><br><span class="line">  &#123;</span><br><span class="line">    <span class="comment">// string hostport = peerAddr.toIpPort();</span></span><br><span class="line">    <span class="comment">// LOG_TRACE &lt;&lt; "Accepts of " &lt;&lt; hostport;</span></span><br><span class="line">    <span class="keyword">if</span> (newConnectionCallback_)</span><br><span class="line">    &#123;</span><br><span class="line">      <span class="comment">//我们可以看到在这里它就调用了创建新的TcpConnection</span></span><br><span class="line">      newConnectionCallback_(connfd, peerAddr);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">else</span></span><br><span class="line">    &#123;</span><br><span class="line">      sockets::<span class="built_in">close</span>(connfd);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">//...中间我省略一些不要的东西</span></span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+
+<p>这里我们说除了看到它调用newConnectionCallback_外其实还有一个更重要的东西那就是<strong>acceptSocket_.accept(&amp;peerAddr)</strong>，我们可以现在在这里大致的说一下它的底层实际是调用了accept()函数，这个当然是当我们分析到Socket这个类的时候我会说的。</p>
+<p>Acceptor还有一个比较重要的函数就是<strong>void Acceptor::listen()</strong></p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//开始调用listen进行监听，并且enableReading注册事件</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">Acceptor::listen</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">  loop_-&gt;assertInLoopThread();</span><br><span class="line">  listenning_ = <span class="literal">true</span>;</span><br><span class="line">  <span class="comment">//底层调用了listen()函数</span></span><br><span class="line">  acceptSocket_.<span class="built_in">listen</span>();</span><br><span class="line">  <span class="comment">//注册事件到epoll上</span></span><br><span class="line">  acceptChannel_.enableReading();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>其实我想说Accepor这个类到这里就算分析完了！！！</p>
+<hr>
+<p>我们接下来继续往下走，这个才是Acceptor的核心，Socket类<br>其实在前面我们能看到Acceptor中的构造函数调用了这么一个Socket类中的函数：<br> <strong>acceptSocket_(sockets::createNonblockingOrDie())</strong></p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">sockets::createNonblockingOrDie</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line"><span class="meta">#<span class="meta-keyword">if</span> VALGRIND</span></span><br><span class="line">	<span class="comment">//创建一个监听socket</span></span><br><span class="line">  <span class="keyword">int</span> sockfd = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);</span><br><span class="line">  <span class="keyword">if</span> (sockfd &lt; <span class="number">0</span>)</span><br><span class="line">  &#123;</span><br><span class="line">    LOG_SYSFATAL &lt;&lt; <span class="string">"sockets::createNonblockingOrDie"</span>;</span><br><span class="line">  &#125;</span><br><span class="line">	<span class="comment">//把socket设置成非阻塞模式</span></span><br><span class="line">  setNonBlockAndCloseOnExec(sockfd);</span><br><span class="line"><span class="meta">#<span class="meta-keyword">else</span></span></span><br><span class="line">  <span class="keyword">int</span> sockfd = ::socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_TCP);</span><br><span class="line">  <span class="keyword">if</span> (sockfd &lt; <span class="number">0</span>)</span><br><span class="line">  &#123;</span><br><span class="line">    LOG_SYSFATAL &lt;&lt; <span class="string">"sockets::createNonblockingOrDie"</span>;</span><br><span class="line">  &#125;</span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br><span class="line">  <span class="keyword">return</span> sockfd;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在这里我们把设置监听socket找到了<br>还调用了那么一个函数：<br> <strong>acceptSocket_.bindAddress(listenAddr)</strong></p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">Socket::bindAddress</span><span class="params">(<span class="keyword">const</span> InetAddress&amp; addr)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">  sockets::bindOrDie(sockfd_, addr.getSockAddrInet());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>接着继续往下走</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">sockets::bindOrDie</span><span class="params">(<span class="keyword">int</span> sockfd, <span class="keyword">const</span> struct sockaddr_in&amp; addr)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">  <span class="keyword">int</span> ret = ::bind(sockfd, sockaddr_cast(&amp;addr), <span class="keyword">static_cast</span>&lt;<span class="keyword">socklen_t</span>&gt;(<span class="keyword">sizeof</span> addr));</span><br><span class="line">  <span class="keyword">if</span> (ret &lt; <span class="number">0</span>)</span><br><span class="line">  &#123;</span><br><span class="line">    LOG_SYSFATAL &lt;&lt; <span class="string">"sockets::bindOrDie"</span>;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这里我们把bind()找到了</p>
+<p><strong>Acceptor::listen()</strong>中的listen调用了<strong>acceptSocket_.listen()</strong></p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">Socket::listen</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">  sockets::listenOrDie(sockfd_);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>继续往下走</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">sockets::listenOrDie</span><span class="params">(<span class="keyword">int</span> sockfd)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">  <span class="keyword">int</span> ret = ::<span class="built_in">listen</span>(sockfd, SOMAXCONN);</span><br><span class="line">  <span class="keyword">if</span> (ret &lt; <span class="number">0</span>)</span><br><span class="line">  &#123;</span><br><span class="line">    LOG_SYSFATAL &lt;&lt; <span class="string">"sockets::listenOrDie"</span>;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这里我们把listen()找到了</p>
+<p>从<strong>Acceptor::handleRead()</strong>中我们可以找到<strong>acceptSocket_.accept(&amp;peerAddr)</strong>，而这个函数的底层则是accpet()</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">Socket::accept</span><span class="params">(InetAddress* peeraddr)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">  <span class="class"><span class="keyword">struct</span> <span class="title">sockaddr_in</span> <span class="title">addr</span>;</span></span><br><span class="line">  bzero(&amp;addr, <span class="keyword">sizeof</span> addr);</span><br><span class="line">  <span class="comment">//找到accept()</span></span><br><span class="line">  <span class="keyword">int</span> connfd = sockets::accept(sockfd_, &amp;addr);</span><br><span class="line">  <span class="keyword">if</span> (connfd &gt;= <span class="number">0</span>)</span><br><span class="line">  &#123;</span><br><span class="line">    peeraddr-&gt;setSockAddrInet(addr);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> connfd;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>是吧accept()找到了吧！！！<br>OK，我想说服务器最重要的几个函数我们都找到了<br>socket()、bind()、listen()、accept()，那么这一块也都算是分析完了吧！！</p>
+
+        </div>
+
+        <blockquote class="post-copyright">
+    
+    <div class="content">
+        
+<span class="post-time">
+    Last updated: <time datetime="2020-02-15T15:57:20.354Z" itemprop="dateUpdated">2020-02-15 23:57:20</time>
+</span><br>
+
+
+        
+    </div>
+    
+    <footer>
+        <a href="http://yoursite.com">
+            <img src="/img/miao2.jpeg" alt="Zerber">
+            Zerber
+        </a>
+    </footer>
+</blockquote>
+
+        
+
+
+        <div class="post-footer">
+            
+	<ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Muduo/" rel="tag">Muduo</a></li></ul>
+
+
+            
+<div class="page-share-wrap">
+    
+
+<div class="page-share" id="pageShare">
+    <ul class="reset share-icons">
+      <li>
+        <a class="weibo share-sns" target="_blank" href="http://service.weibo.com/share/share.php?url=http://yoursite.com/2016/08/06/Muduo%E5%BA%93%E7%9A%84%E6%A1%86%E6%9E%B6%E5%89%96%E6%9E%90%E5%8F%8A%E6%80%BB%E7%BB%93(%E4%BA%8C)/&title=《Muduo库的框架剖析及总结(二)》 — 懒散集&pic=http://yoursite.com/img/miao2.jpeg" data-title="微博">
+          <i class="icon icon-weibo"></i>
+        </a>
+      </li>
+      <li>
+        <a class="weixin share-sns wxFab" href="javascript:;" data-title="微信">
+          <i class="icon icon-weixin"></i>
+        </a>
+      </li>
+      <li>
+        <a class="qq share-sns" target="_blank" href="http://connect.qq.com/widget/shareqq/index.html?url=http://yoursite.com/2016/08/06/Muduo%E5%BA%93%E7%9A%84%E6%A1%86%E6%9E%B6%E5%89%96%E6%9E%90%E5%8F%8A%E6%80%BB%E7%BB%93(%E4%BA%8C)/&title=《Muduo库的框架剖析及总结(二)》 — 懒散集&source=我觉得可能由于我可能要分析完这几个大的模块可能并非易事，要仔细的分析也是绝壁很困难，我写的文章带有很多的口水话，一方面我是希望用通俗的语言去解释这些东西大..." data-title=" QQ">
+          <i class="icon icon-qq"></i>
+        </a>
+      </li>
+      <li>
+        <a class="facebook share-sns" target="_blank" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2016/08/06/Muduo%E5%BA%93%E7%9A%84%E6%A1%86%E6%9E%B6%E5%89%96%E6%9E%90%E5%8F%8A%E6%80%BB%E7%BB%93(%E4%BA%8C)/" data-title=" Facebook">
+          <i class="icon icon-facebook"></i>
+        </a>
+      </li>
+      <li>
+        <a class="twitter share-sns" target="_blank" href="https://twitter.com/intent/tweet?text=《Muduo库的框架剖析及总结(二)》 — 懒散集&url=http://yoursite.com/2016/08/06/Muduo%E5%BA%93%E7%9A%84%E6%A1%86%E6%9E%B6%E5%89%96%E6%9E%90%E5%8F%8A%E6%80%BB%E7%BB%93(%E4%BA%8C)/&via=http://yoursite.com" data-title=" Twitter">
+          <i class="icon icon-twitter"></i>
+        </a>
+      </li>
+      <li>
+        <a class="google share-sns" target="_blank" href="https://plus.google.com/share?url=http://yoursite.com/2016/08/06/Muduo%E5%BA%93%E7%9A%84%E6%A1%86%E6%9E%B6%E5%89%96%E6%9E%90%E5%8F%8A%E6%80%BB%E7%BB%93(%E4%BA%8C)/" data-title=" Google+">
+          <i class="icon icon-google-plus"></i>
+        </a>
+      </li>
+    </ul>
+ </div>
+
+
+
+    <a href="javascript:;" id="shareFab" class="page-share-fab waves-effect waves-circle">
+        <i class="icon icon-share-alt icon-lg"></i>
+    </a>
+</div>
+
+
+
+        </div>
+    </div>
+
+    
+<nav class="post-nav flex-row flex-justify-between">
+  
+    <div class="waves-block waves-effect prev">
+      <a href="/2018/04/23/%E5%AF%B9%E4%BA%8Endk%E7%9A%84%E4%BD%BF%E7%94%A8/" id="post-prev" class="post-nav-link">
+        <div class="tips"><i class="icon icon-angle-left icon-lg icon-pr"></i> Prev</div>
+        <h4 class="title">对于ndk的使用</h4>
+      </a>
+    </div>
+  
+
+  
+    <div class="waves-block waves-effect next">
+      <a href="/2016/08/06/Muduo%E5%BA%93%E7%9A%84%E6%A1%86%E6%9E%B6%E5%89%96%E6%9E%90%E5%8F%8A%E6%80%BB%E7%BB%93(%E4%B8%80)/" id="post-next" class="post-nav-link">
+        <div class="tips">Next <i class="icon icon-angle-right icon-lg icon-pl"></i></div>
+        <h4 class="title">Muduo库的框架剖析及总结(一)</h4>
+      </a>
+    </div>
+  
+</nav>
+
+
+
+    
+
+
+<section class="comments" id="comments">
+    <div id="disqus_thread"></div>
+    <script>
+    var disqus_shortname = 'true';
+    lazyScripts.push('//' + disqus_shortname + '.disqus.com/embed.js')
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" target="_blank" rel="noopener">comments powered by Disqus.</a></noscript>
+</section>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</article>
+
+
+
+</div>
+
+        <footer class="footer">
+    <div class="top">
+        
+
+        <p>
+            
+            <span>This blog is licensed under a <a rel="license noopener" href="https://creativecommons.org/licenses/by/4.0/" target="_blank">Creative Commons Attribution 4.0 International License</a>.</span>
+        </p>
+    </div>
+    <div class="bottom">
+        <p><span>Zerber &copy; 2020</span>
+            <span>
+                
+                Power by <a href="http://hexo.io/" target="_blank">Hexo</a> Theme <a href="https://github.com/yscoder/hexo-theme-indigo" target="_blank">indigo</a>
+            </span>
+        </p>
+    </div>
+</footer>
+
+    </main>
+    <div class="mask" id="mask"></div>
+<a href="javascript:;" id="gotop" class="waves-effect waves-circle waves-light"><span class="icon icon-lg icon-chevron-up"></span></a>
+
+
+
+<div class="global-share" id="globalShare">
+    <ul class="reset share-icons">
+      <li>
+        <a class="weibo share-sns" target="_blank" href="http://service.weibo.com/share/share.php?url=http://yoursite.com/2016/08/06/Muduo%E5%BA%93%E7%9A%84%E6%A1%86%E6%9E%B6%E5%89%96%E6%9E%90%E5%8F%8A%E6%80%BB%E7%BB%93(%E4%BA%8C)/&title=《Muduo库的框架剖析及总结(二)》 — 懒散集&pic=http://yoursite.com/img/miao2.jpeg" data-title="微博">
+          <i class="icon icon-weibo"></i>
+        </a>
+      </li>
+      <li>
+        <a class="weixin share-sns wxFab" href="javascript:;" data-title="微信">
+          <i class="icon icon-weixin"></i>
+        </a>
+      </li>
+      <li>
+        <a class="qq share-sns" target="_blank" href="http://connect.qq.com/widget/shareqq/index.html?url=http://yoursite.com/2016/08/06/Muduo%E5%BA%93%E7%9A%84%E6%A1%86%E6%9E%B6%E5%89%96%E6%9E%90%E5%8F%8A%E6%80%BB%E7%BB%93(%E4%BA%8C)/&title=《Muduo库的框架剖析及总结(二)》 — 懒散集&source=我觉得可能由于我可能要分析完这几个大的模块可能并非易事，要仔细的分析也是绝壁很困难，我写的文章带有很多的口水话，一方面我是希望用通俗的语言去解释这些东西大..." data-title=" QQ">
+          <i class="icon icon-qq"></i>
+        </a>
+      </li>
+      <li>
+        <a class="facebook share-sns" target="_blank" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2016/08/06/Muduo%E5%BA%93%E7%9A%84%E6%A1%86%E6%9E%B6%E5%89%96%E6%9E%90%E5%8F%8A%E6%80%BB%E7%BB%93(%E4%BA%8C)/" data-title=" Facebook">
+          <i class="icon icon-facebook"></i>
+        </a>
+      </li>
+      <li>
+        <a class="twitter share-sns" target="_blank" href="https://twitter.com/intent/tweet?text=《Muduo库的框架剖析及总结(二)》 — 懒散集&url=http://yoursite.com/2016/08/06/Muduo%E5%BA%93%E7%9A%84%E6%A1%86%E6%9E%B6%E5%89%96%E6%9E%90%E5%8F%8A%E6%80%BB%E7%BB%93(%E4%BA%8C)/&via=http://yoursite.com" data-title=" Twitter">
+          <i class="icon icon-twitter"></i>
+        </a>
+      </li>
+      <li>
+        <a class="google share-sns" target="_blank" href="https://plus.google.com/share?url=http://yoursite.com/2016/08/06/Muduo%E5%BA%93%E7%9A%84%E6%A1%86%E6%9E%B6%E5%89%96%E6%9E%90%E5%8F%8A%E6%80%BB%E7%BB%93(%E4%BA%8C)/" data-title=" Google+">
+          <i class="icon icon-google-plus"></i>
+        </a>
+      </li>
+    </ul>
+ </div>
+
+
+<div class="page-modal wx-share" id="wxShare">
+    <a class="close" href="javascript:;"><i class="icon icon-close"></i></a>
+    <p>扫一扫，分享到微信</p>
+    <img src="//api.qrserver.com/v1/create-qr-code/?data=http://yoursite.com/2016/08/06/Muduo%E5%BA%93%E7%9A%84%E6%A1%86%E6%9E%B6%E5%89%96%E6%9E%90%E5%8F%8A%E6%80%BB%E7%BB%93(%E4%BA%8C)/" alt="微信分享二维码">
+</div>
+
+
+
+
+    <script src="//cdn.bootcss.com/node-waves/0.7.4/waves.min.js"></script>
+<script>
+var BLOG = { ROOT: '/', SHARE: true, REWARD: false };
+
+
+</script>
+
+<script src="/js/main.min.js?v=1.7.2"></script>
+
+
+<div class="search-panel" id="search-panel">
+    <ul class="search-result" id="search-result"></ul>
+</div>
+<template id="search-tpl">
+<li class="item">
+    <a href="{path}" class="waves-block waves-effect">
+        <div class="title ellipsis" title="{title}">{title}</div>
+        <div class="flex-row flex-middle">
+            <div class="tags ellipsis">
+                {tags}
+            </div>
+            <time class="flex-col time">{date}</time>
+        </div>
+    </a>
+</li>
+</template>
+
+<script src="/js/search.min.js?v=1.7.2" async></script>
+
+
+
+
+
+
+
+
+<script>
+(function() {
+    var OriginTitile = document.title, titleTime;
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+            document.title = '倒是希望你快点回家了=   =！';
+            clearTimeout(titleTime);
+        } else {
+            document.title = '(つェ⊂)咦!又好了!';
+            titleTime = setTimeout(function() {
+                document.title = OriginTitile;
+            },2000);
+        }
+    });
+})();
+</script>
+
+
+
+</body>
+</html>
