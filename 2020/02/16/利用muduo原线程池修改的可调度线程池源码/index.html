@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html>
+<head>
+    
+
+    
+
+    
+
+
+
+    <meta charset="utf-8">
+    
+    
+    
+    
+    <title>利用muduo原线程池修改的可调度线程池源码 | 懒散集</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    
+    <meta name="theme-color" content="#2182C7">
+    
+    
+    <meta name="keywords" content="Muduo">
+    <meta name="description" content="由于muduo的线程池是抢占式的，在锁过多利用的情况下我们需要自己利用自己的规则去分配和调度线程，我这个实现的就是一个可自己分配和调度的线程池，其特点有以下几点  每个线程都有自己的消息队列并且大小不限 每个线程都可自由阻塞，但是消息队列正常接受消息 可利用Run进行开启线程或者启动的时候利用一个列表开启线程池，很方便  12345678910111213141516171819202122232">
+<meta property="og:type" content="article">
+<meta property="og:title" content="利用muduo原线程池修改的可调度线程池源码">
+<meta property="og:url" content="http://yoursite.com/2020/02/16/%E5%88%A9%E7%94%A8muduo%E5%8E%9F%E7%BA%BF%E7%A8%8B%E6%B1%A0%E4%BF%AE%E6%94%B9%E7%9A%84%E5%8F%AF%E8%B0%83%E5%BA%A6%E7%BA%BF%E7%A8%8B%E6%B1%A0%E6%BA%90%E7%A0%81/">
+<meta property="og:site_name" content="懒散集">
+<meta property="og:description" content="由于muduo的线程池是抢占式的，在锁过多利用的情况下我们需要自己利用自己的规则去分配和调度线程，我这个实现的就是一个可自己分配和调度的线程池，其特点有以下几点  每个线程都有自己的消息队列并且大小不限 每个线程都可自由阻塞，但是消息队列正常接受消息 可利用Run进行开启线程或者启动的时候利用一个列表开启线程池，很方便  12345678910111213141516171819202122232">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2020-02-15T16:43:13.000Z">
+<meta property="article:modified_time" content="2020-02-15T16:54:40.780Z">
+<meta property="article:author" content="Zerber">
+<meta property="article:tag" content="Muduo">
+<meta name="twitter:card" content="summary">
+    
+    <link rel="shortcut icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/css/style.css?v=1.7.2">
+    <script>window.lazyScripts=[]</script>
+
+    <!-- custom head -->
+    
+
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+<body>
+    <div id="loading" class="active"></div>
+
+    <aside id="menu" class="hide" >
+  <div class="inner flex-row-vertical">
+    <a href="javascript:;" class="header-icon waves-effect waves-circle waves-light" id="menu-off">
+        <i class="icon icon-lg icon-close"></i>
+    </a>
+    <div class="brand-wrap" style="background-image:url(/img/kaku.jpeg)">
+      <div class="brand">
+        <a href="/null" class="avatar waves-effect waves-circle waves-light">
+          <img src="/img/miao2.jpeg">
+        </a>
+        <hgroup class="introduce">
+          <h5 class="nickname">Zerber</h5>
+          <a href="mailto:暂时就不贴邮箱了" title="暂时就不贴邮箱了" class="mail">暂时就不贴邮箱了</a>
+        </hgroup>
+      </div>
+    </div>
+    <div class="scroll-wrap flex-col">
+      <ul class="nav">
+        
+            <li class="waves-block waves-effect">
+              <a href="/"  >
+                <i class="icon icon-lg icon-home"></i>
+                主页
+              </a>
+            </li>
+        
+            <li class="waves-block waves-effect">
+              <a href="/archives"  >
+                <i class="icon icon-lg icon-archives"></i>
+                Archives
+              </a>
+            </li>
+        
+            <li class="waves-block waves-effect">
+              <a href="/tags"  >
+                <i class="icon icon-lg icon-tags"></i>
+                Tags
+              </a>
+            </li>
+        
+            <li class="waves-block waves-effect">
+              <a href="https://twitter.com/Zerber_" target="_blank" >
+                <i class="icon icon-lg icon-twitter"></i>
+                Twitter
+              </a>
+            </li>
+        
+      </ul>
+    </div>
+  </div>
+</aside>
+
+    <main id="main">
+        <header class="top-header" id="header">
+    <div class="flex-row">
+        <a href="javascript:;" class="header-icon waves-effect waves-circle waves-light on" id="menu-toggle">
+          <i class="icon icon-lg icon-navicon"></i>
+        </a>
+        <div class="flex-col header-title ellipsis">利用muduo原线程池修改的可调度线程池源码</div>
+        
+        <div class="search-wrap" id="search-wrap">
+            <a href="javascript:;" class="header-icon waves-effect waves-circle waves-light" id="back">
+                <i class="icon icon-lg icon-chevron-left"></i>
+            </a>
+            <input type="text" id="key" class="search-input" autocomplete="off" placeholder="Search">
+            <a href="javascript:;" class="header-icon waves-effect waves-circle waves-light" id="search">
+                <i class="icon icon-lg icon-search"></i>
+            </a>
+        </div>
+        
+        
+        <a href="javascript:;" class="header-icon waves-effect waves-circle waves-light" id="menuShare">
+            <i class="icon icon-lg icon-share-alt"></i>
+        </a>
+        
+    </div>
+</header>
+<header class="content-header post-header">
+
+    <div class="container fade-scale">
+        <h1 class="title">利用muduo原线程池修改的可调度线程池源码</h1>
+        <h5 class="subtitle">
+            
+                <time datetime="2020-02-15T16:43:13.000Z" itemprop="datePublished" class="page-time">
+  2020-02-16
+</time>
+
+
+            
+        </h5>
+    </div>
+
+    
+
+
+</header>
+
+
+<div class="container body-wrap">
+    
+
+<article id="post-利用muduo原线程池修改的可调度线程池源码"
+  class="post-article article-type-post fade" itemprop="blogPost">
+
+    <div class="post-card">
+        <h1 class="post-card-title">利用muduo原线程池修改的可调度线程池源码</h1>
+        <div class="post-meta">
+            <time class="post-time" title="2020-02-16 00:43:13" datetime="2020-02-15T16:43:13.000Z"  itemprop="datePublished">2020-02-16</time>
+
+            
+
+
+            
+
+        </div>
+        <div class="post-content" id="post-content" itemprop="postContent">
+            <p>由于muduo的线程池是抢占式的，在锁过多利用的情况下我们需要自己利用自己的规则去分配和调度线程，我这个实现的就是一个可自己分配和调度的线程池，其特点有以下几点</p>
+<ol>
+<li>每个线程都有自己的消息队列并且大小不限</li>
+<li>每个线程都可自由阻塞，但是消息队列正常接受消息</li>
+<li>可利用Run进行开启线程或者启动的时候利用一个列表开启线程池，很方便</li>
+</ol>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* </span></span><br><span class="line"><span class="comment"> * File:   NonPreemptiveThreadPool.h</span></span><br><span class="line"><span class="comment"> * Author: zerber</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * Created on 2017年9月1日, 下午1:27</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">pragma</span> once</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">"local_common/Public.h"</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;muduo/base/Thread.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;muduo/base/Mutex.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;muduo/base/Condition.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;muduo/base/CountDownLatch.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">ifndef</span> NONPREEMPTIVETHREADPOOL_H</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> NONPREEMPTIVETHREADPOOL_H</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">typedef</span> boost::function&lt;<span class="keyword">void</span> ()&gt; <span class="built_in">Task</span>;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">RunThreadNode</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">    RunThreadNode(<span class="keyword">const</span> <span class="built_in">std</span>::<span class="built_in">string</span>&amp; name,<span class="keyword">int</span> queuesize = <span class="number">0</span>):</span><br><span class="line">    countDownLatch_(<span class="number">1</span>),</span><br><span class="line">    listMutex_(),</span><br><span class="line">    blockMutex_(),</span><br><span class="line">    notEmpty_(listMutex_),</span><br><span class="line">    blockCond_(blockMutex_),</span><br><span class="line">    isBolck_(<span class="literal">false</span>),</span><br><span class="line">    threadName_(name),</span><br><span class="line">    thread_(boost::bind(&amp;RunThreadNode::RunInThread_,<span class="keyword">this</span>),threadName_),</span><br><span class="line">    running_(<span class="literal">false</span>),</span><br><span class="line">    queuesize_(queuesize)&#123;&#125;</span><br><span class="line">    ~RunThreadNode()</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">if</span>(running_)</span><br><span class="line">        &#123;</span><br><span class="line">            ThreadStop();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">PushTaskInQueue</span><span class="params">(<span class="keyword">const</span> <span class="built_in">Task</span>&amp; task)</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">ThreadStart</span><span class="params">()</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">ThreadStop</span><span class="params">()</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">const</span> <span class="built_in">std</span>::<span class="built_in">string</span>&amp; <span class="title">GetThreadName</span><span class="params">()</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">ThreadBlock</span><span class="params">()</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">ThreadWakeUp</span><span class="params">()</span></span>;</span><br><span class="line">    </span><br><span class="line">    muduo::CountDownLatch countDownLatch_;</span><br><span class="line"><span class="keyword">private</span>:</span><br><span class="line">    <span class="function"><span class="built_in">Task</span> <span class="title">Take_</span><span class="params">()</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">RunInThread_</span><span class="params">()</span></span>;</span><br><span class="line"></span><br><span class="line">    muduo::MutexLock listMutex_;</span><br><span class="line">    muduo::MutexLock blockMutex_;</span><br><span class="line">    muduo::Condition notEmpty_;</span><br><span class="line">    muduo::Condition blockCond_;</span><br><span class="line">    <span class="keyword">bool</span> isBolck_;</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">string</span> threadName_;</span><br><span class="line"></span><br><span class="line">    muduo::Thread thread_;</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">queue</span>&lt;<span class="built_in">Task</span>&gt; queue_;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">bool</span> running_;</span><br><span class="line">    <span class="keyword">int</span> queuesize_;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="keyword">typedef</span> boost::<span class="built_in">shared_ptr</span>&lt;RunThreadNode&gt; RunThreadNodePtr;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">NonPreemptiveThreadPool</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line"><span class="keyword">public</span>:</span><br><span class="line">    <span class="comment">//指定队列长度，指定生成哪些线程</span></span><br><span class="line">    NonPreemptiveThreadPool(<span class="keyword">int</span> queuesize,</span><br><span class="line">            <span class="keyword">const</span> <span class="built_in">std</span>::<span class="built_in">string</span>&amp; name,</span><br><span class="line">            <span class="keyword">int</span>* threadList,</span><br><span class="line">            <span class="keyword">int</span> threadListNum);</span><br><span class="line">    ~NonPreemptiveThreadPool();  </span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">Run</span><span class="params">(<span class="keyword">int</span> threadNum, <span class="keyword">const</span> <span class="built_in">Task</span>&amp; f)</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">Stop</span><span class="params">(<span class="keyword">int</span> threadNum)</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">AllStart</span><span class="params">()</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">AllStop</span><span class="params">()</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">ThreadBlock</span><span class="params">(<span class="keyword">int</span> threadNum)</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">ThreadWakeUp</span><span class="params">(<span class="keyword">int</span> threadNum)</span></span>;</span><br><span class="line"><span class="keyword">private</span>:</span><br><span class="line">    </span><br><span class="line">    boost::<span class="built_in">unordered_map</span>&lt;<span class="keyword">int</span>, RunThreadNodePtr&gt; threads_;</span><br><span class="line">    <span class="keyword">int</span> queuesize_;</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">string</span> name_;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span> <span class="comment">/* NONPREEMPTIVETHREADPOOL_H */</span></span></span><br></pre></td></tr></table></figure>
+
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* </span></span><br><span class="line"><span class="comment"> * File:   NonPreemptiveThreadPool.cpp</span></span><br><span class="line"><span class="comment"> * Author: zerber</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * Created on 2017年9月1日, 下午1:27</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">"NonPreemptiveThreadPool.h"</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;muduo/base/Exception.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">RunThreadNode::PushTaskInQueue</span><span class="params">(<span class="keyword">const</span> <span class="built_in">Task</span>&amp; task)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="function">muduo::MutexLockGuard <span class="title">lock</span><span class="params">(listMutex_)</span></span>;</span><br><span class="line">    </span><br><span class="line">    queue_.push(task);</span><br><span class="line">    notEmpty_.notify();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">RunThreadNode::ThreadStart</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    running_ = <span class="literal">true</span>;</span><br><span class="line">    thread_.start();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">RunThreadNode::ThreadStop</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="function">muduo::MutexLockGuard <span class="title">lock</span><span class="params">(listMutex_)</span></span>;</span><br><span class="line">        running_ = <span class="literal">false</span>;</span><br><span class="line">        notEmpty_.notify();</span><br><span class="line">    &#125;</span><br><span class="line">    thread_.join();</span><br><span class="line">    </span><br><span class="line">    LOG_DEBUG &lt;&lt; <span class="string">"thread "</span> &lt;&lt; threadName_ &lt;&lt; <span class="string">" stop"</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">const</span> <span class="built_in">std</span>::<span class="built_in">string</span>&amp; <span class="title">RunThreadNode::GetThreadName</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">return</span> threadName_;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">RunThreadNode::ThreadBlock</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    isBolck_ = <span class="literal">true</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">RunThreadNode::ThreadWakeUp</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">if</span>(isBolck_)</span><br><span class="line">    &#123;</span><br><span class="line">        isBolck_ = <span class="literal">false</span>;</span><br><span class="line">        blockCond_.notify();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="built_in">Task</span> <span class="title">RunThreadNode::Take_</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="function">muduo::MutexLockGuard <span class="title">lock</span><span class="params">(listMutex_)</span></span>;</span><br><span class="line">    <span class="keyword">while</span>(queue_.empty() &amp;&amp; running_)</span><br><span class="line">    &#123;</span><br><span class="line">        notEmpty_.wait();</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="built_in">Task</span> task;</span><br><span class="line">    <span class="keyword">if</span>(!queue_.empty())</span><br><span class="line">    &#123;</span><br><span class="line">        task = queue_.front();</span><br><span class="line">        queue_.pop();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> task;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">RunThreadNode::RunInThread_</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="function">muduo::MutexLockGuard <span class="title">lock</span><span class="params">(blockMutex_)</span></span>;</span><br><span class="line">    <span class="keyword">try</span></span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">while</span> (running_)</span><br><span class="line">        &#123;</span><br><span class="line">          <span class="function"><span class="built_in">Task</span> <span class="title">task</span><span class="params">(Take_())</span></span>;</span><br><span class="line">          <span class="keyword">while</span>(isBolck_)</span><br><span class="line">          &#123;</span><br><span class="line">              blockCond_.wait();</span><br><span class="line">          &#125;</span><br><span class="line"></span><br><span class="line">          <span class="keyword">if</span>(task)</span><br><span class="line">          &#123;</span><br><span class="line">            task();</span><br><span class="line">          &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">catch</span> (<span class="keyword">const</span> muduo::Exception&amp; ex)</span><br><span class="line">    &#123;</span><br><span class="line">      <span class="built_in">fprintf</span>(<span class="built_in">stderr</span>, <span class="string">"exception caught in ThreadPool %s\n"</span>, threadName_.c_str());</span><br><span class="line">      <span class="built_in">fprintf</span>(<span class="built_in">stderr</span>, <span class="string">"reason: %s\n"</span>, ex.what());</span><br><span class="line">      <span class="built_in">fprintf</span>(<span class="built_in">stderr</span>, <span class="string">"stack trace: %s\n"</span>, ex.stackTrace());</span><br><span class="line">      <span class="built_in">abort</span>();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">catch</span> (<span class="keyword">const</span> <span class="built_in">std</span>::exception&amp; ex)</span><br><span class="line">    &#123;</span><br><span class="line">      <span class="built_in">fprintf</span>(<span class="built_in">stderr</span>, <span class="string">"exception caught in ThreadPool %s\n"</span>, threadName_.c_str());</span><br><span class="line">      <span class="built_in">fprintf</span>(<span class="built_in">stderr</span>, <span class="string">"reason: %s\n"</span>, ex.what());</span><br><span class="line">      <span class="built_in">abort</span>();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">catch</span> (...)</span><br><span class="line">    &#123;</span><br><span class="line">      <span class="built_in">fprintf</span>(<span class="built_in">stderr</span>, <span class="string">"unknown exception caught in ThreadPool %s\n"</span>, threadName_.c_str());</span><br><span class="line">      <span class="keyword">throw</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">////////////////////////////////////////////////////////////////////////////////</span></span><br><span class="line"></span><br><span class="line">NonPreemptiveThreadPool::NonPreemptiveThreadPool(<span class="keyword">int</span> queuesize, </span><br><span class="line">                                                 <span class="keyword">const</span> <span class="built_in">std</span>::<span class="built_in">string</span>&amp; name,</span><br><span class="line">                                                 <span class="keyword">int</span>* threadList = <span class="literal">NULL</span>, </span><br><span class="line">                                                 <span class="keyword">int</span> threadListNum = <span class="number">0</span>)</span><br><span class="line">:queuesize_(queuesize),</span><br><span class="line">name_(name)        </span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">if</span>(threadList != <span class="literal">NULL</span> &amp;&amp; threadListNum &gt; <span class="number">0</span>)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> i=<span class="number">0</span> ; i&lt;threadListNum ; i++)</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="keyword">char</span> id[<span class="number">32</span>];</span><br><span class="line">            <span class="built_in">snprintf</span>(id, <span class="keyword">sizeof</span>(id), <span class="string">"%d"</span>, threadList[i]);</span><br><span class="line">            RunThreadNodePtr pCurRunThreadNode = boost::make_shared&lt;RunThreadNode&gt;(name_+id,queuesize_);</span><br><span class="line">            threads_.insert(make_pair(threadList[i],pCurRunThreadNode));</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">NonPreemptiveThreadPool::~NonPreemptiveThreadPool()</span><br><span class="line">&#123;</span><br><span class="line">    AllStop();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">NonPreemptiveThreadPool::Run</span><span class="params">(<span class="keyword">int</span> threadNum, <span class="keyword">const</span> <span class="built_in">Task</span>&amp; f)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">auto</span> iter = threads_.<span class="built_in">find</span>(threadNum);</span><br><span class="line">    <span class="keyword">if</span>(iter != threads_.<span class="built_in">end</span>())</span><br><span class="line">    &#123;</span><br><span class="line">        iter-&gt;second-&gt;PushTaskInQueue(f);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">else</span></span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">char</span> id[<span class="number">32</span>];</span><br><span class="line">        <span class="built_in">snprintf</span>(id, <span class="keyword">sizeof</span>(id), <span class="string">"%d"</span>, threadNum);</span><br><span class="line">        RunThreadNodePtr pCurRunThreadNode = boost::make_shared&lt;RunThreadNode&gt;(name_+id,queuesize_);</span><br><span class="line">        threads_.insert(make_pair(threadNum,pCurRunThreadNode));</span><br><span class="line">        pCurRunThreadNode-&gt;ThreadStart();</span><br><span class="line">        LOG_DEBUG &lt;&lt; <span class="string">"thread "</span> &lt;&lt; pCurRunThreadNode-&gt;GetThreadName() &lt;&lt; <span class="string">" start"</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">NonPreemptiveThreadPool::Stop</span><span class="params">(<span class="keyword">int</span> threadNum)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">auto</span> iter = threads_.<span class="built_in">find</span>(threadNum);</span><br><span class="line">    <span class="keyword">if</span>(iter == threads_.<span class="built_in">end</span>()) <span class="keyword">return</span>;</span><br><span class="line">    </span><br><span class="line">    iter-&gt;second-&gt;ThreadStop();</span><br><span class="line">    LOG_DEBUG &lt;&lt; <span class="string">"thread "</span> &lt;&lt; iter-&gt;second-&gt;GetThreadName() &lt;&lt; <span class="string">" stop"</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">NonPreemptiveThreadPool::AllStart</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">auto</span> iter = threads_.<span class="built_in">begin</span>();</span><br><span class="line">    <span class="keyword">for</span>(; iter!=threads_.<span class="built_in">end</span>() ;iter++)</span><br><span class="line">    &#123;</span><br><span class="line">        iter-&gt;second-&gt;ThreadStart();</span><br><span class="line">    &#125;</span><br><span class="line">    LOG_DEBUG &lt;&lt; <span class="string">"all threads has been start"</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">NonPreemptiveThreadPool::AllStop</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">auto</span> iter = threads_.<span class="built_in">begin</span>();</span><br><span class="line">    <span class="keyword">for</span>(; iter!=threads_.<span class="built_in">end</span>() ;iter++)</span><br><span class="line">    &#123;</span><br><span class="line">        iter-&gt;second-&gt;ThreadStop();</span><br><span class="line">    &#125;</span><br><span class="line">    LOG_DEBUG &lt;&lt; <span class="string">"all threads has been stop"</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">NonPreemptiveThreadPool::ThreadBlock</span><span class="params">(<span class="keyword">int</span> threadNum)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">auto</span> iter = threads_.<span class="built_in">find</span>(threadNum);</span><br><span class="line">    <span class="keyword">if</span>(iter == threads_.<span class="built_in">end</span>()) <span class="keyword">return</span>;</span><br><span class="line">    iter-&gt;second-&gt;ThreadBlock();</span><br><span class="line">    LOG_DEBUG &lt;&lt; <span class="string">"thread "</span> &lt;&lt; iter-&gt;second-&gt;GetThreadName() &lt;&lt; <span class="string">" block"</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">NonPreemptiveThreadPool::ThreadWakeUp</span><span class="params">(<span class="keyword">int</span> threadNum)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">auto</span> iter = threads_.<span class="built_in">find</span>(threadNum);</span><br><span class="line">    <span class="keyword">if</span>(iter == threads_.<span class="built_in">end</span>()) <span class="keyword">return</span>;</span><br><span class="line">    iter-&gt;second-&gt;ThreadWakeUp();</span><br><span class="line">    LOG_DEBUG &lt;&lt; <span class="string">"thread "</span> &lt;&lt; iter-&gt;second-&gt;GetThreadName() &lt;&lt; <span class="string">" wake up"</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+        </div>
+
+        <blockquote class="post-copyright">
+    
+    <div class="content">
+        
+<span class="post-time">
+    Last updated: <time datetime="2020-02-15T16:54:40.780Z" itemprop="dateUpdated">2020-02-16 00:54:40</time>
+</span><br>
+
+
+        
+    </div>
+    
+    <footer>
+        <a href="http://yoursite.com">
+            <img src="/img/miao2.jpeg" alt="Zerber">
+            Zerber
+        </a>
+    </footer>
+</blockquote>
+
+        
+
+
+        <div class="post-footer">
+            
+	<ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Muduo/" rel="tag">Muduo</a></li></ul>
+
+
+            
+<div class="page-share-wrap">
+    
+
+<div class="page-share" id="pageShare">
+    <ul class="reset share-icons">
+      <li>
+        <a class="weibo share-sns" target="_blank" href="http://service.weibo.com/share/share.php?url=http://yoursite.com/2020/02/16/%E5%88%A9%E7%94%A8muduo%E5%8E%9F%E7%BA%BF%E7%A8%8B%E6%B1%A0%E4%BF%AE%E6%94%B9%E7%9A%84%E5%8F%AF%E8%B0%83%E5%BA%A6%E7%BA%BF%E7%A8%8B%E6%B1%A0%E6%BA%90%E7%A0%81/&title=《利用muduo原线程池修改的可调度线程池源码》 — 懒散集&pic=http://yoursite.com/img/miao2.jpeg" data-title="微博">
+          <i class="icon icon-weibo"></i>
+        </a>
+      </li>
+      <li>
+        <a class="weixin share-sns wxFab" href="javascript:;" data-title="微信">
+          <i class="icon icon-weixin"></i>
+        </a>
+      </li>
+      <li>
+        <a class="qq share-sns" target="_blank" href="http://connect.qq.com/widget/shareqq/index.html?url=http://yoursite.com/2020/02/16/%E5%88%A9%E7%94%A8muduo%E5%8E%9F%E7%BA%BF%E7%A8%8B%E6%B1%A0%E4%BF%AE%E6%94%B9%E7%9A%84%E5%8F%AF%E8%B0%83%E5%BA%A6%E7%BA%BF%E7%A8%8B%E6%B1%A0%E6%BA%90%E7%A0%81/&title=《利用muduo原线程池修改的可调度线程池源码》 — 懒散集&source=" data-title=" QQ">
+          <i class="icon icon-qq"></i>
+        </a>
+      </li>
+      <li>
+        <a class="facebook share-sns" target="_blank" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2020/02/16/%E5%88%A9%E7%94%A8muduo%E5%8E%9F%E7%BA%BF%E7%A8%8B%E6%B1%A0%E4%BF%AE%E6%94%B9%E7%9A%84%E5%8F%AF%E8%B0%83%E5%BA%A6%E7%BA%BF%E7%A8%8B%E6%B1%A0%E6%BA%90%E7%A0%81/" data-title=" Facebook">
+          <i class="icon icon-facebook"></i>
+        </a>
+      </li>
+      <li>
+        <a class="twitter share-sns" target="_blank" href="https://twitter.com/intent/tweet?text=《利用muduo原线程池修改的可调度线程池源码》 — 懒散集&url=http://yoursite.com/2020/02/16/%E5%88%A9%E7%94%A8muduo%E5%8E%9F%E7%BA%BF%E7%A8%8B%E6%B1%A0%E4%BF%AE%E6%94%B9%E7%9A%84%E5%8F%AF%E8%B0%83%E5%BA%A6%E7%BA%BF%E7%A8%8B%E6%B1%A0%E6%BA%90%E7%A0%81/&via=http://yoursite.com" data-title=" Twitter">
+          <i class="icon icon-twitter"></i>
+        </a>
+      </li>
+      <li>
+        <a class="google share-sns" target="_blank" href="https://plus.google.com/share?url=http://yoursite.com/2020/02/16/%E5%88%A9%E7%94%A8muduo%E5%8E%9F%E7%BA%BF%E7%A8%8B%E6%B1%A0%E4%BF%AE%E6%94%B9%E7%9A%84%E5%8F%AF%E8%B0%83%E5%BA%A6%E7%BA%BF%E7%A8%8B%E6%B1%A0%E6%BA%90%E7%A0%81/" data-title=" Google+">
+          <i class="icon icon-google-plus"></i>
+        </a>
+      </li>
+    </ul>
+ </div>
+
+
+
+    <a href="javascript:;" id="shareFab" class="page-share-fab waves-effect waves-circle">
+        <i class="icon icon-share-alt icon-lg"></i>
+    </a>
+</div>
+
+
+
+        </div>
+    </div>
+
+    
+<nav class="post-nav flex-row flex-justify-between flex-row-reverse">
+  
+
+  
+    <div class="waves-block waves-effect next">
+      <a href="/2019/07/11/%E6%8E%A8%E9%80%81%E6%A1%86%E6%9E%B6%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%BA%9B%E6%80%BB%E7%BB%93/" id="post-next" class="post-nav-link">
+        <div class="tips">Next <i class="icon icon-angle-right icon-lg icon-pl"></i></div>
+        <h4 class="title">推送框架设计一些总结</h4>
+      </a>
+    </div>
+  
+</nav>
+
+
+
+    
+
+
+<section class="comments" id="comments">
+    <div id="disqus_thread"></div>
+    <script>
+    var disqus_shortname = 'true';
+    lazyScripts.push('//' + disqus_shortname + '.disqus.com/embed.js')
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" target="_blank" rel="noopener">comments powered by Disqus.</a></noscript>
+</section>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</article>
+
+
+
+</div>
+
+        <footer class="footer">
+    <div class="top">
+        
+
+        <p>
+            
+            <span>This blog is licensed under a <a rel="license noopener" href="https://creativecommons.org/licenses/by/4.0/" target="_blank">Creative Commons Attribution 4.0 International License</a>.</span>
+        </p>
+    </div>
+    <div class="bottom">
+        <p><span>Zerber &copy; 2020</span>
+            <span>
+                
+                Power by <a href="http://hexo.io/" target="_blank">Hexo</a> Theme <a href="https://github.com/yscoder/hexo-theme-indigo" target="_blank">indigo</a>
+            </span>
+        </p>
+    </div>
+</footer>
+
+    </main>
+    <div class="mask" id="mask"></div>
+<a href="javascript:;" id="gotop" class="waves-effect waves-circle waves-light"><span class="icon icon-lg icon-chevron-up"></span></a>
+
+
+
+<div class="global-share" id="globalShare">
+    <ul class="reset share-icons">
+      <li>
+        <a class="weibo share-sns" target="_blank" href="http://service.weibo.com/share/share.php?url=http://yoursite.com/2020/02/16/%E5%88%A9%E7%94%A8muduo%E5%8E%9F%E7%BA%BF%E7%A8%8B%E6%B1%A0%E4%BF%AE%E6%94%B9%E7%9A%84%E5%8F%AF%E8%B0%83%E5%BA%A6%E7%BA%BF%E7%A8%8B%E6%B1%A0%E6%BA%90%E7%A0%81/&title=《利用muduo原线程池修改的可调度线程池源码》 — 懒散集&pic=http://yoursite.com/img/miao2.jpeg" data-title="微博">
+          <i class="icon icon-weibo"></i>
+        </a>
+      </li>
+      <li>
+        <a class="weixin share-sns wxFab" href="javascript:;" data-title="微信">
+          <i class="icon icon-weixin"></i>
+        </a>
+      </li>
+      <li>
+        <a class="qq share-sns" target="_blank" href="http://connect.qq.com/widget/shareqq/index.html?url=http://yoursite.com/2020/02/16/%E5%88%A9%E7%94%A8muduo%E5%8E%9F%E7%BA%BF%E7%A8%8B%E6%B1%A0%E4%BF%AE%E6%94%B9%E7%9A%84%E5%8F%AF%E8%B0%83%E5%BA%A6%E7%BA%BF%E7%A8%8B%E6%B1%A0%E6%BA%90%E7%A0%81/&title=《利用muduo原线程池修改的可调度线程池源码》 — 懒散集&source=" data-title=" QQ">
+          <i class="icon icon-qq"></i>
+        </a>
+      </li>
+      <li>
+        <a class="facebook share-sns" target="_blank" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2020/02/16/%E5%88%A9%E7%94%A8muduo%E5%8E%9F%E7%BA%BF%E7%A8%8B%E6%B1%A0%E4%BF%AE%E6%94%B9%E7%9A%84%E5%8F%AF%E8%B0%83%E5%BA%A6%E7%BA%BF%E7%A8%8B%E6%B1%A0%E6%BA%90%E7%A0%81/" data-title=" Facebook">
+          <i class="icon icon-facebook"></i>
+        </a>
+      </li>
+      <li>
+        <a class="twitter share-sns" target="_blank" href="https://twitter.com/intent/tweet?text=《利用muduo原线程池修改的可调度线程池源码》 — 懒散集&url=http://yoursite.com/2020/02/16/%E5%88%A9%E7%94%A8muduo%E5%8E%9F%E7%BA%BF%E7%A8%8B%E6%B1%A0%E4%BF%AE%E6%94%B9%E7%9A%84%E5%8F%AF%E8%B0%83%E5%BA%A6%E7%BA%BF%E7%A8%8B%E6%B1%A0%E6%BA%90%E7%A0%81/&via=http://yoursite.com" data-title=" Twitter">
+          <i class="icon icon-twitter"></i>
+        </a>
+      </li>
+      <li>
+        <a class="google share-sns" target="_blank" href="https://plus.google.com/share?url=http://yoursite.com/2020/02/16/%E5%88%A9%E7%94%A8muduo%E5%8E%9F%E7%BA%BF%E7%A8%8B%E6%B1%A0%E4%BF%AE%E6%94%B9%E7%9A%84%E5%8F%AF%E8%B0%83%E5%BA%A6%E7%BA%BF%E7%A8%8B%E6%B1%A0%E6%BA%90%E7%A0%81/" data-title=" Google+">
+          <i class="icon icon-google-plus"></i>
+        </a>
+      </li>
+    </ul>
+ </div>
+
+
+<div class="page-modal wx-share" id="wxShare">
+    <a class="close" href="javascript:;"><i class="icon icon-close"></i></a>
+    <p>扫一扫，分享到微信</p>
+    <img src="//api.qrserver.com/v1/create-qr-code/?data=http://yoursite.com/2020/02/16/%E5%88%A9%E7%94%A8muduo%E5%8E%9F%E7%BA%BF%E7%A8%8B%E6%B1%A0%E4%BF%AE%E6%94%B9%E7%9A%84%E5%8F%AF%E8%B0%83%E5%BA%A6%E7%BA%BF%E7%A8%8B%E6%B1%A0%E6%BA%90%E7%A0%81/" alt="微信分享二维码">
+</div>
+
+
+
+
+    <script src="//cdn.bootcss.com/node-waves/0.7.4/waves.min.js"></script>
+<script>
+var BLOG = { ROOT: '/', SHARE: true, REWARD: false };
+
+
+</script>
+
+<script src="/js/main.min.js?v=1.7.2"></script>
+
+
+<div class="search-panel" id="search-panel">
+    <ul class="search-result" id="search-result"></ul>
+</div>
+<template id="search-tpl">
+<li class="item">
+    <a href="{path}" class="waves-block waves-effect">
+        <div class="title ellipsis" title="{title}">{title}</div>
+        <div class="flex-row flex-middle">
+            <div class="tags ellipsis">
+                {tags}
+            </div>
+            <time class="flex-col time">{date}</time>
+        </div>
+    </a>
+</li>
+</template>
+
+<script src="/js/search.min.js?v=1.7.2" async></script>
+
+
+
+
+
+
+
+
+<script>
+(function() {
+    var OriginTitile = document.title, titleTime;
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+            document.title = '倒是希望你快点回家了=   =！';
+            clearTimeout(titleTime);
+        } else {
+            document.title = '(つェ⊂)咦!又好了!';
+            titleTime = setTimeout(function() {
+                document.title = OriginTitile;
+            },2000);
+        }
+    });
+})();
+</script>
+
+
+
+</body>
+</html>
