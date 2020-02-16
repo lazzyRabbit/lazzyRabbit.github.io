@@ -13,6 +13,8 @@
     
     
     
+    <link rel="canonical" href="https://lazzyrabbit.github.io//2016/08/06/Muduo%E5%BA%93%E7%9A%84%E6%A1%86%E6%9E%B6%E5%89%96%E6%9E%90%E5%8F%8A%E6%80%BB%E7%BB%93(%E4%B8%89)/">
+    
     
     <title>Muduo库的框架剖析及总结(三) | 懒散集</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
@@ -24,7 +26,7 @@
     <meta name="description" content="有些人觉得我的博客口水话很多，嗯，我个人考虑了一下，可能我写东西确实没有那么高大上，口水话很多，但是我个人确实非常喜欢这种看着非常亲切的风格，其实我觉得还好，只要你能读懂我的博客就行！！！有问题和意见可以提，有问题可以相互探讨、留言，甚至在留言板骂我都行，对我个人也是一种鼓励吧，好了还是太多废话了！！！">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Muduo库的框架剖析及总结(三)">
-<meta property="og:url" content="http://yoursite.com/2016/08/06/Muduo%E5%BA%93%E7%9A%84%E6%A1%86%E6%9E%B6%E5%89%96%E6%9E%90%E5%8F%8A%E6%80%BB%E7%BB%93(%E4%B8%89)/">
+<meta property="og:url" content="https://lazzyrabbit.github.io/2016/08/06/Muduo%E5%BA%93%E7%9A%84%E6%A1%86%E6%9E%B6%E5%89%96%E6%9E%90%E5%8F%8A%E6%80%BB%E7%BB%93(%E4%B8%89)/">
 <meta property="og:site_name" content="懒散集">
 <meta property="og:description" content="有些人觉得我的博客口水话很多，嗯，我个人考虑了一下，可能我写东西确实没有那么高大上，口水话很多，但是我个人确实非常喜欢这种看着非常亲切的风格，其实我觉得还好，只要你能读懂我的博客就行！！！有问题和意见可以提，有问题可以相互探讨、留言，甚至在留言板骂我都行，对我个人也是一种鼓励吧，好了还是太多废话了！！！">
 <meta property="og:locale" content="en_US">
@@ -235,7 +237,7 @@
     </div>
     
     <footer>
-        <a href="http://yoursite.com">
+        <a href="https://lazzyrabbit.github.io">
             <img src="/img/miao2.jpeg" alt="Zerber">
             Zerber
         </a>
@@ -257,7 +259,7 @@
 <div class="page-share" id="pageShare">
     <ul class="reset share-icons">
       <li>
-        <a class="weibo share-sns" target="_blank" href="http://service.weibo.com/share/share.php?url=http://yoursite.com/2016/08/06/Muduo%E5%BA%93%E7%9A%84%E6%A1%86%E6%9E%B6%E5%89%96%E6%9E%90%E5%8F%8A%E6%80%BB%E7%BB%93(%E4%B8%89)/&title=《Muduo库的框架剖析及总结(三)》 — 懒散集&pic=http://yoursite.com/img/miao2.jpeg" data-title="微博">
+        <a class="weibo share-sns" target="_blank" href="http://service.weibo.com/share/share.php?url=https://lazzyrabbit.github.io/2016/08/06/Muduo%E5%BA%93%E7%9A%84%E6%A1%86%E6%9E%B6%E5%89%96%E6%9E%90%E5%8F%8A%E6%80%BB%E7%BB%93(%E4%B8%89)/&title=《Muduo库的框架剖析及总结(三)》 — 懒散集&pic=https://lazzyrabbit.github.io/img/miao2.jpeg" data-title="微博">
           <i class="icon icon-weibo"></i>
         </a>
       </li>
@@ -267,22 +269,22 @@
         </a>
       </li>
       <li>
-        <a class="qq share-sns" target="_blank" href="http://connect.qq.com/widget/shareqq/index.html?url=http://yoursite.com/2016/08/06/Muduo%E5%BA%93%E7%9A%84%E6%A1%86%E6%9E%B6%E5%89%96%E6%9E%90%E5%8F%8A%E6%80%BB%E7%BB%93(%E4%B8%89)/&title=《Muduo库的框架剖析及总结(三)》 — 懒散集&source=有些人觉得我的博客口水话很多，嗯，我个人考虑了一下，可能我写东西确实没有那么高大上，口水话很多，但是我个人确实非常喜欢这种看着非常亲切的风格，其实我觉得还..." data-title=" QQ">
+        <a class="qq share-sns" target="_blank" href="http://connect.qq.com/widget/shareqq/index.html?url=https://lazzyrabbit.github.io/2016/08/06/Muduo%E5%BA%93%E7%9A%84%E6%A1%86%E6%9E%B6%E5%89%96%E6%9E%90%E5%8F%8A%E6%80%BB%E7%BB%93(%E4%B8%89)/&title=《Muduo库的框架剖析及总结(三)》 — 懒散集&source=有些人觉得我的博客口水话很多，嗯，我个人考虑了一下，可能我写东西确实没有那么高大上，口水话很多，但是我个人确实非常喜欢这种看着非常亲切的风格，其实我觉得还..." data-title=" QQ">
           <i class="icon icon-qq"></i>
         </a>
       </li>
       <li>
-        <a class="facebook share-sns" target="_blank" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2016/08/06/Muduo%E5%BA%93%E7%9A%84%E6%A1%86%E6%9E%B6%E5%89%96%E6%9E%90%E5%8F%8A%E6%80%BB%E7%BB%93(%E4%B8%89)/" data-title=" Facebook">
+        <a class="facebook share-sns" target="_blank" href="https://www.facebook.com/sharer/sharer.php?u=https://lazzyrabbit.github.io/2016/08/06/Muduo%E5%BA%93%E7%9A%84%E6%A1%86%E6%9E%B6%E5%89%96%E6%9E%90%E5%8F%8A%E6%80%BB%E7%BB%93(%E4%B8%89)/" data-title=" Facebook">
           <i class="icon icon-facebook"></i>
         </a>
       </li>
       <li>
-        <a class="twitter share-sns" target="_blank" href="https://twitter.com/intent/tweet?text=《Muduo库的框架剖析及总结(三)》 — 懒散集&url=http://yoursite.com/2016/08/06/Muduo%E5%BA%93%E7%9A%84%E6%A1%86%E6%9E%B6%E5%89%96%E6%9E%90%E5%8F%8A%E6%80%BB%E7%BB%93(%E4%B8%89)/&via=http://yoursite.com" data-title=" Twitter">
+        <a class="twitter share-sns" target="_blank" href="https://twitter.com/intent/tweet?text=《Muduo库的框架剖析及总结(三)》 — 懒散集&url=https://lazzyrabbit.github.io/2016/08/06/Muduo%E5%BA%93%E7%9A%84%E6%A1%86%E6%9E%B6%E5%89%96%E6%9E%90%E5%8F%8A%E6%80%BB%E7%BB%93(%E4%B8%89)/&via=https://lazzyrabbit.github.io" data-title=" Twitter">
           <i class="icon icon-twitter"></i>
         </a>
       </li>
       <li>
-        <a class="google share-sns" target="_blank" href="https://plus.google.com/share?url=http://yoursite.com/2016/08/06/Muduo%E5%BA%93%E7%9A%84%E6%A1%86%E6%9E%B6%E5%89%96%E6%9E%90%E5%8F%8A%E6%80%BB%E7%BB%93(%E4%B8%89)/" data-title=" Google+">
+        <a class="google share-sns" target="_blank" href="https://plus.google.com/share?url=https://lazzyrabbit.github.io/2016/08/06/Muduo%E5%BA%93%E7%9A%84%E6%A1%86%E6%9E%B6%E5%89%96%E6%9E%90%E5%8F%8A%E6%80%BB%E7%BB%93(%E4%B8%89)/" data-title=" Google+">
           <i class="icon icon-google-plus"></i>
         </a>
       </li>
@@ -388,7 +390,7 @@
 <div class="global-share" id="globalShare">
     <ul class="reset share-icons">
       <li>
-        <a class="weibo share-sns" target="_blank" href="http://service.weibo.com/share/share.php?url=http://yoursite.com/2016/08/06/Muduo%E5%BA%93%E7%9A%84%E6%A1%86%E6%9E%B6%E5%89%96%E6%9E%90%E5%8F%8A%E6%80%BB%E7%BB%93(%E4%B8%89)/&title=《Muduo库的框架剖析及总结(三)》 — 懒散集&pic=http://yoursite.com/img/miao2.jpeg" data-title="微博">
+        <a class="weibo share-sns" target="_blank" href="http://service.weibo.com/share/share.php?url=https://lazzyrabbit.github.io/2016/08/06/Muduo%E5%BA%93%E7%9A%84%E6%A1%86%E6%9E%B6%E5%89%96%E6%9E%90%E5%8F%8A%E6%80%BB%E7%BB%93(%E4%B8%89)/&title=《Muduo库的框架剖析及总结(三)》 — 懒散集&pic=https://lazzyrabbit.github.io/img/miao2.jpeg" data-title="微博">
           <i class="icon icon-weibo"></i>
         </a>
       </li>
@@ -398,22 +400,22 @@
         </a>
       </li>
       <li>
-        <a class="qq share-sns" target="_blank" href="http://connect.qq.com/widget/shareqq/index.html?url=http://yoursite.com/2016/08/06/Muduo%E5%BA%93%E7%9A%84%E6%A1%86%E6%9E%B6%E5%89%96%E6%9E%90%E5%8F%8A%E6%80%BB%E7%BB%93(%E4%B8%89)/&title=《Muduo库的框架剖析及总结(三)》 — 懒散集&source=有些人觉得我的博客口水话很多，嗯，我个人考虑了一下，可能我写东西确实没有那么高大上，口水话很多，但是我个人确实非常喜欢这种看着非常亲切的风格，其实我觉得还..." data-title=" QQ">
+        <a class="qq share-sns" target="_blank" href="http://connect.qq.com/widget/shareqq/index.html?url=https://lazzyrabbit.github.io/2016/08/06/Muduo%E5%BA%93%E7%9A%84%E6%A1%86%E6%9E%B6%E5%89%96%E6%9E%90%E5%8F%8A%E6%80%BB%E7%BB%93(%E4%B8%89)/&title=《Muduo库的框架剖析及总结(三)》 — 懒散集&source=有些人觉得我的博客口水话很多，嗯，我个人考虑了一下，可能我写东西确实没有那么高大上，口水话很多，但是我个人确实非常喜欢这种看着非常亲切的风格，其实我觉得还..." data-title=" QQ">
           <i class="icon icon-qq"></i>
         </a>
       </li>
       <li>
-        <a class="facebook share-sns" target="_blank" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2016/08/06/Muduo%E5%BA%93%E7%9A%84%E6%A1%86%E6%9E%B6%E5%89%96%E6%9E%90%E5%8F%8A%E6%80%BB%E7%BB%93(%E4%B8%89)/" data-title=" Facebook">
+        <a class="facebook share-sns" target="_blank" href="https://www.facebook.com/sharer/sharer.php?u=https://lazzyrabbit.github.io/2016/08/06/Muduo%E5%BA%93%E7%9A%84%E6%A1%86%E6%9E%B6%E5%89%96%E6%9E%90%E5%8F%8A%E6%80%BB%E7%BB%93(%E4%B8%89)/" data-title=" Facebook">
           <i class="icon icon-facebook"></i>
         </a>
       </li>
       <li>
-        <a class="twitter share-sns" target="_blank" href="https://twitter.com/intent/tweet?text=《Muduo库的框架剖析及总结(三)》 — 懒散集&url=http://yoursite.com/2016/08/06/Muduo%E5%BA%93%E7%9A%84%E6%A1%86%E6%9E%B6%E5%89%96%E6%9E%90%E5%8F%8A%E6%80%BB%E7%BB%93(%E4%B8%89)/&via=http://yoursite.com" data-title=" Twitter">
+        <a class="twitter share-sns" target="_blank" href="https://twitter.com/intent/tweet?text=《Muduo库的框架剖析及总结(三)》 — 懒散集&url=https://lazzyrabbit.github.io/2016/08/06/Muduo%E5%BA%93%E7%9A%84%E6%A1%86%E6%9E%B6%E5%89%96%E6%9E%90%E5%8F%8A%E6%80%BB%E7%BB%93(%E4%B8%89)/&via=https://lazzyrabbit.github.io" data-title=" Twitter">
           <i class="icon icon-twitter"></i>
         </a>
       </li>
       <li>
-        <a class="google share-sns" target="_blank" href="https://plus.google.com/share?url=http://yoursite.com/2016/08/06/Muduo%E5%BA%93%E7%9A%84%E6%A1%86%E6%9E%B6%E5%89%96%E6%9E%90%E5%8F%8A%E6%80%BB%E7%BB%93(%E4%B8%89)/" data-title=" Google+">
+        <a class="google share-sns" target="_blank" href="https://plus.google.com/share?url=https://lazzyrabbit.github.io/2016/08/06/Muduo%E5%BA%93%E7%9A%84%E6%A1%86%E6%9E%B6%E5%89%96%E6%9E%90%E5%8F%8A%E6%80%BB%E7%BB%93(%E4%B8%89)/" data-title=" Google+">
           <i class="icon icon-google-plus"></i>
         </a>
       </li>
@@ -424,7 +426,7 @@
 <div class="page-modal wx-share" id="wxShare">
     <a class="close" href="javascript:;"><i class="icon icon-close"></i></a>
     <p>扫一扫，分享到微信</p>
-    <img src="//api.qrserver.com/v1/create-qr-code/?data=http://yoursite.com/2016/08/06/Muduo%E5%BA%93%E7%9A%84%E6%A1%86%E6%9E%B6%E5%89%96%E6%9E%90%E5%8F%8A%E6%80%BB%E7%BB%93(%E4%B8%89)/" alt="微信分享二维码">
+    <img src="//api.qrserver.com/v1/create-qr-code/?data=https://lazzyrabbit.github.io/2016/08/06/Muduo%E5%BA%93%E7%9A%84%E6%A1%86%E6%9E%B6%E5%89%96%E6%9E%90%E5%8F%8A%E6%80%BB%E7%BB%93(%E4%B8%89)/" alt="微信分享二维码">
 </div>
 
 
